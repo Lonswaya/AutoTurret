@@ -13,20 +13,20 @@ DATE=$(date +"%y-%m-%d-%T")
 echo "INITIALIZING STARTUP SCRIPT"	
 
 
-if [ ! -f $AUTORUN_LOG ]
+if [ ! -e $AUTORUN_LOG ]
 then
 	# Create log
     touch $AUTORUN_LOG
 fi
 
 # Mount the USB that we expect to find (bottom left on Raspberry Pi B
-if [ -f $USB_PREMOUNT_PATH1 ]
+if [ -e $USB_PREMOUNT_PATH1 ]
 then
 	sudo mount -t vfat -o rw $USB_PREMOUNT_PATH1 $USB_PATH
-elif [ -f $USB_PREMOUNT_PATH2 ]
+elif [ -e $USB_PREMOUNT_PATH2 ]
 then
 	sudo mount -t vfat -o rw $USB_PREMOUNT_PATH2 $USB_PATH
-elif [ -f $USB_PREMOUNT_PATH3 ]
+elif [ -e $USB_PREMOUNT_PATH3 ]
 then
 	sudo mount -t vfat -o rw $USB_PREMOUNT_PATH3 $USB_PATH
 else
@@ -41,7 +41,7 @@ AUTORUN_FILE="$USB_PATH$AUTORUN_FILENAME"
 SUCCESS_AUTORUNSTARTED="AUTORUN FOUND, BEGINNING TURRET SEQUENCE"
 ERROR_NOTFOUND="NO AUTORUN FOUND, CANCELLING AUTO-TURRET SEQUENCE"
 
-if [ -f $AUTORUN_FILE ]
+if [ -e $AUTORUN_FILE ]
 then
         sh $AUTORUN_FILE
 		echo $DATE $SUCCESS_AUTORUNSTARTED >> $AUTORUN_LOG
