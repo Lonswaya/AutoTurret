@@ -54,12 +54,12 @@ struct config_info {
 };
 
 void *capture(void *args) {
-    //sets up image processing
+    //sets up image processing datas
     Mat frame;
     HOGDescriptor hog;
     hog.setSVMDetector(HOGDescriptor::getDefaultPeopleDetector());
     std::vector<Rect> rects;
-
+    Mat prev, curr, next, d1, d2, motion;
     struct config_info *configs = (struct config_info *) args;
     
     //starts up fps thread
@@ -69,7 +69,15 @@ void *capture(void *args) {
     fps.rate = 0;
     fps.dead = 0;
     pthread_create(&fps_thread, NULL, &fps_counter, (void *) &fps);
-    
+   
+
+    configs->cap->read(frame);
+    cvtColor(frame, prev, COLOR_BGR2GRAY);
+    configs->cap->read(frame);
+    cvtColor(frame, curr, COLOR_BGR2GRAY);
+    configs->cap->read(frame);
+    cvtColor(frame, next, COLOR_BGR2GRAY);
+
     while(true) {
         
         if(configs->die) {
@@ -86,21 +94,28 @@ void *capture(void *args) {
 
         if(configs->hog)
             hog.detectMultiScale(frame, rects, 0, Size(configs->hog_stride, configs->hog_stride), Size(configs->hog_pad, configs->hog_pad));
+       
+
+        prev = curr;
+        curr = next;
+        next = frame;
+        cvtColor(next, next, CV_RGB2GRAY);
+
+        absdiff(prev, next, d1);
+        absdiff(next, curr, d2);
+        bitwise_and(d1, d2, motion);
         
         if(configs->show_rect) {
             for(int i = 0; i < rects.size(); i++) 
                 rectangle(frame, Point2i(rects[i].x, rects[i].y), Point2i(rects[i].x + rects[i].width, rects[i].y + rects[i].height), Scalar(0, 255, 0), 2);
         }
-        //laser tracking should be done before grayscale
         
-        //color doesnt matter in motion dection, convert to gray scale
-        //cvtColor(frame, frame, COLOR_BGR2GRAY);
         //blur to remove noise pixels
         //GaussianBlur(frame, frame, Size(21, 21), 0);
 
         if(configs->show_frame) {
-            putText(frame, std::to_string(fps.rate), Point2f(10, 30), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255)); 
-            imshow("ss", frame);    
+            putText(motion, std::to_string(fps.rate), Point2f(10, 30), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255)); 
+            imshow("ss", motion);    
         }
 
         waitKey(1);
@@ -121,7 +136,7 @@ int main(int argc, char** argv) {
     struct config_info config;
     config.die = 0; 
     config.resize = 0;
-    config.hog = 1;
+    config.hog = 0;
     config.hog_stride = 4;
     config.hog_pad = 8;
     config.show_rect = 1;
