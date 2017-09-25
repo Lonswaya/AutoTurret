@@ -3,7 +3,9 @@
 #include <wiringPi.h>
 
 // Compile with  gcc -Wall -o blink blink.c -lwiringPi
-
+/**
+ * This is our basic servo interaction class with static interaction methods
+*/
 
 void turn(int deg, int pin) {
 	pinMode(pin, OUTPUT);
@@ -27,6 +29,11 @@ void turn(int deg, int pin) {
 	}		
 }
 
+int initialize() {
+	return wiringPiSetup();
+}
+
+/*
 int main(void) {
 	printf("Raspberry Pi blink\n");
 	if (wiringPiSetup() == -1) return 1;
@@ -42,4 +49,4 @@ int main(void) {
 	turn(26, 7);
 	delay(1000);
 	turn(25, 7);
-}
+}*/
