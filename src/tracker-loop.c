@@ -9,6 +9,8 @@ int main(void) {
 	initialize();
 	// Main loops
 	while(1) {
-		
+		// Swerve left to right
+		go_to(30, 90);
+		go_to(180, 90);				
 	}
 }
