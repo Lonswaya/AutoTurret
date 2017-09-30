@@ -1,2 +1,6 @@
 # Ignore any turret log file
 AUTORUN_LOG.txt
+
+# Any object file
+*.o
+TrackerBot
