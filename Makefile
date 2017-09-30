@@ -11,7 +11,7 @@ SRCS=./src/tracker-loop.c ./src/servo-control.c
 # The object files from sources
 OBJS=$(subst .c,.o,$(SRCS))
 
-LDFLAGS=-Wall 
+LDFLAGS=-Wall -pthread
 
 LDLIBS= -lwiringPi
 
