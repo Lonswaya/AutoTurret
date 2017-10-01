@@ -3,4 +3,9 @@ AUTORUN_LOG.txt
 
 # Any object file
 *.o
+
+# Main exec
 TrackerBot
+
+# Vim turds
+*.swp 
