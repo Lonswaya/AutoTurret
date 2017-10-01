@@ -10,7 +10,7 @@
 * This is the base class for human interaction (input, keystrokes) that apply to servos
 *
 */
-#define	SENSITIVITY	1
+#define	SENSITIVITY	3
 /* these are already defined in curses, but we redefine (cuz idk, workarounds?) */
 #define MY_KEY_UP	65
 #define MY_KEY_DOWN	66
