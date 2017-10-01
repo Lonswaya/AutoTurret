@@ -12,7 +12,8 @@ int main(void) {
 	initialize();
 	// Main loops
 	// turn_hard_loop()
-	turn_smooth_loop();
+	//turn_smooth_loop();
+	human_input_loop();
 }
 void turn_hard_loop() {
 	while (1) {

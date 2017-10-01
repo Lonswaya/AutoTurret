@@ -11,7 +11,10 @@ typedef struct turn_smooth_args {
 	int timems;
 } turn_smooth_args;
 
-
+#define MAX_Y	180
+#define MIN_Y	30
+#define MAX_X	180
+#define MIN_X	0
 
 void go_to(int x, int y);
 void go_to_smooth(int startX, int startY, int endX, int endY, int timems);

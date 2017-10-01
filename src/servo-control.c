@@ -11,17 +11,11 @@
  * This is our basic servo interaction class with static interaction methods
 */
 
-#define MAX_Y	180
-#define MIN_Y	30
-#define MAX_X	180
-#define MIN_X	0
 #define PIN_X	7
 #define PIN_Y	0
 #define SIGNAL_PULSES	2
 
 
-//void turn(struct * turn_args args/*int pin, int deg*/);
-//void turn_smooth(struct * turn_smooth_args args/*int pin, int start, int end, int timems*/);
 
 /**
  * Goes to the angles specified in a 2d 180 by 180 grid, if it is within bounds
@@ -67,7 +61,7 @@ void go_to(int x, int y) {
 	// Wait for both threads to finish
 	pthread_join(s_x, NULL);
 	pthread_join(s_y, NULL);
-	printf("Traveled to (%d, %d)\n", x, y);
+	//printf("Traveled to (%d, %d)\n", x, y);
 }
 /**
  * Will turn as smooth as possible from the start point to the end points given
@@ -109,15 +103,15 @@ void go_to_smooth(int startX, int startY, int endX, int endY, int timems) {
 	y_args.end = endY;
 	x_args.timems = timems;
 	y_args.timems = timems;
-	printf("pin: %d, start: %d, end: %d, timems: %d\n",x_args.pin, x_args.start, x_args.end, x_args.timems);
-	printf("pin: %d, start: %d, end: %d, timems: %d\n",y_args.pin, y_args.start, y_args.end, y_args.timems);
+	//printf("pin: %d, start: %d, end: %d, timems: %d\n",x_args.pin, x_args.start, x_args.end, x_args.timems);
+	//printf("pin: %d, start: %d, end: %d, timems: %d\n",y_args.pin, y_args.start, y_args.end, y_args.timems);
 	pthread_create( &s_x, /*&attr*/ NULL, (void *) &turn_smooth, (void *) &x_args);
 	pthread_create( &s_y, /*&attr*/ NULL, (void *) &turn_smooth, (void *) &y_args);
 
 	// Wait for both threads to finish
 	pthread_join(s_x, NULL);
 	pthread_join(s_y, NULL);
-	printf("Turned smoothly to (%d, %d)\n", endX, endY);
+	//printf("Turned smoothly to (%d, %d)\n", endX, endY);
 }
 
 void turn_smooth(struct turn_smooth_args * args/*int pin, int start, int end, int timems*/) {
@@ -137,7 +131,7 @@ void turn_smooth(struct turn_smooth_args * args/*int pin, int start, int end, in
 	//printf("abs: %d\n", abs(currentAngle - args->end));
 	while (abs(currentAngle - args->end) > abs(ceil(step_deg))) { 
 		if (args->pin == 7) {
-			printf("abs: %d, step: %f, pos: %d\n", abs(currentAngle-args->end), step_deg, currentAngle);
+		//	printf("abs: %d, step: %f, pos: %d\n", abs(currentAngle-args->end), step_deg, currentAngle);
 		}
 		currentAngle += (int)roundf(step_deg);
 		args2.pin = args->pin;
