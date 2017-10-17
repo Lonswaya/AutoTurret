@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <curses.h>	// For getch
 #include <signal.h>
-#include "../include/servo-control.h"
+#include "../include/servo-controls.h"
 
 
 /**
