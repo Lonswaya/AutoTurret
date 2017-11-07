@@ -5,6 +5,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#define PORT 5000           //change this
+#define TIMEOUT 30          //seconds
+
 int net_init(Connection *c, int port) {
 
     c->queue = malloc(sizeof(PacketQueue));
@@ -21,20 +24,52 @@ int net_init(Connection *c, int port) {
         return -2;
     }
 
+    c->server_socket = 0;
+    c->socket = 0;
+    c->state = DED;
+    return 1;
+}
+
+/* 
+ * Private function used to set up a socket to be listened on
+ */
+int _net_init_socket(Connection *c) {
+
+    //newly init socket is 0
+    if(c->server_socket != 0) {
+        close(c->server_socket);
+    }
+
     struct protoent *proto = getprotobyname("tcp");
     if(proto == NULL) {
         //can't get protocol?
+        return -1;
+    }
+
+    c->server_socket = socket(AF_INET, SOCK_STREAM, proto->p_proto);
+    if(c->socket < 0) {
+        //can't create socket
+        return -2;
+    }
+
+    int yes = 1;
+    if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
+        //cant be reused??
         return -3;
     }
 
-    c->socket = socket(AF_INET, SOCK_STREAM, proto->p_proto);
-    if(c->socket < 0) {
-        //can't create socket
+    struct sockaddr_in server_addr;
+    memset(&server_addr, 0, sizeof(struct spckaddr_in));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = htons(INADDR_ANY);
+    server_addr.sin_port = htons(PORT);
+
+    if(bind(c->server_sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+        //can't bind
         return -4;
     }
 
     c->state = INIT;
-    return 1;
 }
 
 int net_get_packet(Connection *c, Packet *p) {
@@ -51,7 +86,7 @@ int net_get_packet(Connection *c, Packet *p) {
         return -2;
     }
     
-    Packet *head = c->queue->head;
+    PacketQEnt *head = c->queue->head;
     memcpy(p, head, sizeof(Packet));
     
     c->queue->head = head->next;
@@ -71,6 +106,10 @@ int net_get_packet(Connection *c, Packet *p) {
     return 1;
 }
 
+/* 
+ * Private function used for the networking loop to recv packet
+ * then put it in the queue
+ */
 int _net_put_packet(Connection *c Packet *p) {
     
     //could have a max queue size check here
@@ -80,19 +119,20 @@ int _net_put_packet(Connection *c Packet *p) {
         return -1;
     }
 
-    Packet *new_p = malloc(sizeof(Packet));
+    PacketQEnt *new_p = malloc(sizeof(PacketQEnt));
     if(new_p == NULL) {
         //cant malloc
         return -2;
     }
 
     memcpy(new_p, p, sizeof(Packet));
-    
+    new_p->next = NULL;
+
     if(pthread_mutex_lock(&(c->queue->lock)) != 0) {
         return -3;
     }
 
-    Packet *tail = c->queue->tail;
+    PacketQEnt *tail = c->queue->tail;
 
     if(tail == NULL) {
         c->queue->head = c->queue->tail = new_p;
@@ -110,4 +150,61 @@ int _net_put_packet(Connection *c Packet *p) {
 
 void network_loop(void *arg) {
 
+    Connection *c = (Connection *) arg;
+    struct sockaddr client_addr;
+    
+    while(c->state != STOP) { 
+        
+        if(c->state == DED) {
+            //if socket is dead then we reinit the socket
+            if(_net_init_socket(c) < 0) {
+                continue;
+            }
+            
+            c->socket = accept(c->server_socket, &client_addr, sizeof(client_addr));
+
+            if(c->socket == -1) {
+
+                //err on accept?
+                c->state = DED;
+                c->server_socket = 0;
+                c->socket = 0;
+                continue;
+            }
+        
+            struct timeval timeout;
+            timeout.tv_sec = TIMEOUT;
+            timeout.tv_usec = 0; 
+            
+            if(setsockopt(c->socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout) < 0) {
+
+                //recv timeout failed.. but we can still go
+                
+            }
+
+            c->state = READY;
+        }
+
+        if(c->state == BUZY) {
+            continue;
+        }
+
+        if(c->state == READY) {
+                
+            Packet packet;
+            size_t bytes;
+
+            bytes = recv(c->socket, &packet, sizeof(packet), 0);            
+            if(bytes <= 0) {
+                //errors here usually means it needs a restart
+                //0 means connection closed
+                //< 0 is error timeout also falls here so becareful
+                //as of now we treat them all as fatal error that needs a restart
+                c->state = DED;
+                continue;
+            }            
+
+            _net_put_packet(c, packet);
+        }
+    }
 }
