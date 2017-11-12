@@ -39,7 +39,9 @@ int md_init(MotionDetector *md, MotionConfig *config) {
 int md_detect(MotionDetector *md, int *x, int *y, int *dx, int *dy) {
    
     Mat curr_frame;
-    
+
+    Mat out; 
+
     if(md->frame_buffer.size() == 0) {
         //motion detector first initialized
         //squeeze in 3 grabs, first grab is wasted from next pop
@@ -50,7 +52,7 @@ int md_detect(MotionDetector *md, int *x, int *y, int *dx, int *dy) {
                 //camera disconnect or no more image???
                 return 0;
             }
-            
+
             if(md->config->blur_size > 0) {
                 GaussianBlur(curr_frame, curr_frame, Size(md->config->blur_size, md->config->blur_size), 0);  
             }
@@ -67,6 +69,8 @@ int md_detect(MotionDetector *md, int *x, int *y, int *dx, int *dy) {
         return 0;
     }
 
+
+    out = curr_frame;
     if(md->config->blur_size > 0) {
         GaussianBlur(curr_frame, curr_frame, Size(md->config->blur_size, md->config->blur_size), 0);  
     }
@@ -86,22 +90,40 @@ int md_detect(MotionDetector *md, int *x, int *y, int *dx, int *dy) {
     md_find_motion(md, &result);
 
     md_condense(md, x, y, dx, dy);
+
+    for(int i = 0; i < md->rect_list.size(); i++) {
+        rectangle(out, md->rect_list[i], Scalar(255, 0, 0), 2, 8, 0 );    
+    }
+
+    circle(out, Point( *x + *dx / 2, *y + *dy / 2), 3, Scalar(0, 255, 0), 2, 8, 0);
+    
+    circle(out, Point( (*x + *dx), (*y + *dy)), 3, Scalar(0, 255, 255), 2, 8, 0);
+    circle(out, Point(*x, *y), 3, Scalar(0, 0, 255), 2, 8, 0);
+    imshow("ss", out);
+    waitKey(1);
     return 1;
 }
 
-
+/*
 int _md_search_full_motion(std::vector<cv::Rect> &list, Mat *frame, int x, int y) {
     
     int max_x = x;
     int max_y = y; 
+    int min_x = max_x;
+    int min_y = min_y;
+
     
-    //TODO: probing algorithm
+
+    
+
 
     return 1;
 }
 
+*/
+
 int md_find_motion(MotionDetector *md, Mat *diff_frame) {
-    
+    /*
     int rows = diff_frame->rows;
     int cols = diff_frame->cols;
     
@@ -114,8 +136,25 @@ int md_find_motion(MotionDetector *md, Mat *diff_frame) {
                 _md_search_full_motion(md->rect_list, diff_frame, i, j);   
             }
         }
-    }
+    }*/
 
+    //turns out there is a countour function that will find all bounding rects commenting out these for now
+
+    //std::vector<cv::Rect> list = md->rect_list;
+    
+    md->rect_list.clear();    
+    std::vector< std::vector<Point> > contours;
+    std::vector<Vec4i> hierarchy;
+    
+    //making copy just in case countour changes it
+    Mat input = *diff_frame;
+
+    findContours(input, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
+    for(int i = 0; i < contours.size(); i++) {
+        md->rect_list.push_back(boundingRect(contours[i]));
+    }
+    
+    
     return 1;
 }
 
@@ -152,4 +191,22 @@ int md_condense(MotionDetector *md, int *x, int *y, int *dx, int *dy) {
     *dy = max_y - min_y;
 
     return 1;
+}
+
+
+int main() {
+    
+    MotionConfig config;
+    config.blur_size = 0;
+    config.motion_thresh = 40;
+
+    MotionDetector md;
+    md_init(&md, &config);
+
+    int x, y, dx, dy;
+
+    while(1) {
+        md_detect(&md, &x, &y, &dx, &dy);
+    }
+
 }
