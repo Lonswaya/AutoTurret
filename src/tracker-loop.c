@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "../include/servo-control.h"
+#include "../include/servo-controls.h"
 
 void turn_hard_loop();
 void turn_smooth_loop();

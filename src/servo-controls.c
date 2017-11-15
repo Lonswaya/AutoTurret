@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <math.h>
-#include "../include/servo-control.h"
+#include "../include/servo-controls.h"
 
 // Compile with  gcc -Wall -o blink blink.c -lwiringPi
 /**
@@ -169,7 +169,6 @@ void turn(struct turn_args * args/*int pin, int deg*/) {
 }
 
 int initialize() {
-	return wiringPiSetup();
 	pinMode(PIN_X, OUTPUT);
 	pinMode(PIN_Y, OUTPUT);
 	// Sometimes when first booting, pins can get stuck and not respond
@@ -179,6 +178,8 @@ int initialize() {
 	digitalWrite(PIN_Y, 1);
 	digitalWrite(PIN_X, 0);
 	digitalWrite(PIN_Y, 0);
+	return wiringPiSetup();
+	
 }
 
 /*

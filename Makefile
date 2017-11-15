@@ -4,7 +4,7 @@ CXX = g++ -g
 RM=rm -f
 
 # All source files we want to compile
-SRCS=./src/tracker-loop.c ./src/servo-control.c ./src/human-input.c
+SRCS=./src/tracker-loop.c ./src/servo-controls.c ./src/human-input.c ./src/servo-controller.c
 
 # The object files from sources
 OBJS=$(subst .c,.o,$(SRCS))
@@ -20,7 +20,9 @@ tracker-loop: $(OBJS)
 
 tracker-loop.o : ./src/tracker-loop.c
 
-servo-control.o : ./src/servo-control.c ./include/servo-control.h
+servo-control.o : ./src/servo-controls.c ./include/servo-controls.h
+
+servo-controller.o : ./src/servo-controller.c ./include/servo-controller.h
 
 human-input.o : ./src/human-input.c ./include/human-input.h
 
