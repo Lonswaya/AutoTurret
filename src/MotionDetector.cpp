@@ -12,6 +12,7 @@ int md_init(MotionDetector *md, MotionConfig *config) {
         return 0;
     }
 
+    md->run_flag = 1;
     md->config = config;
     md->config->max_x = (int) md->cam.get(CAP_PROP_FRAME_WIDTH);
     md->config->max_y = (int) md->cam.get(CAP_PROP_FRAME_HEIGHT);
@@ -24,6 +25,8 @@ int md_init(MotionDetector *md, MotionConfig *config) {
 
     md->frame_buffer.clear();
     md->rect_list.clear();
+    
+    md->centers_of_motion.clear();
 
     if(config->blur_size < 0) {
         config->blur_size = 0; //no blur
@@ -36,7 +39,7 @@ int md_init(MotionDetector *md, MotionConfig *config) {
     return 1;
 }
 
-int md_detect(MotionDetector *md, int *x, int *y, int *dx, int *dy) {
+int md_detect(MotionDetector *md) {
    
     Mat curr_frame;
 
@@ -89,18 +92,47 @@ int md_detect(MotionDetector *md, int *x, int *y, int *dx, int *dy) {
 
     md_find_motion(md, &result);
 
-    md_condense(md, x, y, dx, dy);
+    int x, y, dx, dy;
+
+    md_condense(md, &x, &y, &dx, &dy);
 
     for(int i = 0; i < md->rect_list.size(); i++) {
         rectangle(out, md->rect_list[i], Scalar(255, 0, 0), 2, 8, 0 );    
     }
 
-    circle(out, Point( *x + *dx / 2, *y + *dy / 2), 3, Scalar(0, 255, 0), 2, 8, 0);
+    md->centers_of_motion.push_back( Point(x + dx / 2, y + dy / 2) );
+    circle(out, md->centers_of_motion.back(), 3, Scalar(0, 255, 0), 2, 8, 0);
+    circle(out, Point( (x + dx), (y + dy)), 3, Scalar(0, 255, 255), 2, 8, 0);
+    circle(out, Point(x, y), 3, Scalar(0, 0, 255), 2, 8, 0);
     
-    circle(out, Point( (*x + *dx), (*y + *dy)), 3, Scalar(0, 255, 255), 2, 8, 0);
-    circle(out, Point(*x, *y), 3, Scalar(0, 0, 255), 2, 8, 0);
+    
     imshow("ss", out);
     waitKey(1);
+    return 1;
+}
+
+int md_get_average_center(MotionDetector *md, int *x, int *y) {
+    
+    //some how we called this without any frames put in the list we just return center of camera
+    size_t size = md->centers_of_motion.size();
+    if(size == 0) {
+        *x = md->config->max_x / 2;
+        *y = md->config->max_y / 2;
+        return 1;
+    }
+
+    int tmp_x = 0, tmp_y = 0;
+
+    for(int i = 0; i < size; i++) {
+        tmp_x += md->centers_of_motion[i].x;
+        tmp_y += md->centers_of_motion[i].y;
+    }
+
+    *x = tmp_x / size;
+    *y = tmp_y / size;
+    
+    md->centers_of_motion.clear();
+
     return 1;
 }
 
@@ -120,8 +152,6 @@ int md_find_motion(MotionDetector *md, Mat *diff_frame) {
         md->rect_list.push_back(boundingRect(contours[i]));
     }
     
-    //imshow("ss", *diff_frame);
-    //waitKey(1);
     return 1;
 }
 
@@ -159,6 +189,20 @@ int md_condense(MotionDetector *md, int *x, int *y, int *dx, int *dy) {
 
     return 1;
 }
+
+void *detection_loop(void* arg) {
+    MotionDetector *md = (MotionDetector *) arg;
+
+    while(md->run_flag) {
+        if(md->config->detect_flag) {
+            md_detect(md);
+        }
+    }
+    //thread ends clean up code    
+}
+
+
+
 
 /*
 

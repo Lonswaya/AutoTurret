@@ -225,8 +225,14 @@ void *net_loop(void *arg) {
                 continue;
             }            
 
-            printf("\nRecv Packet with type: %d\n", packet.type);
+            //printf("\nRecv Packet with type: %d\n", packet.type);
             _net_put_packet(c, &packet);
         }
     }
+
+    //thread stopped clean up
+    close(c->socket);
+    close(c->server_socket);
+
+    //should probably free queues too.
 }

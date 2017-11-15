@@ -11,7 +11,9 @@ if __name__ == '__main__':
     sock.connect((sys.argv[1], int(sys.argv[2])))
 
     while True:
-        num = input("> ")
-        num = int(num)
-        packet = struct.pack('ii', num, num)
+        type_num = input('type: ')
+        type_num = int(type_num)
+        data = input('data: ')
+        data = int(data)
+        packet = struct.pack('ii', type_num, data)
         sock.send(packet)
