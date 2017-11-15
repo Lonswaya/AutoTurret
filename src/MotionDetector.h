@@ -22,7 +22,12 @@ typedef struct motion_detector {
     std::list<cv::Mat> frame_buffer;
     std::vector<cv::Rect> rect_list;
     MotionConfig *config;
-    std::vector<cv::Point> centers_of_motion;
+    //keeping a buffer and iteral all everyone could be expensive
+    //std::vector<cv::Point> centers_of_motion;
+    int total_center_x;
+    int total_center_y;
+    int center_count;
+
     int run_flag;
 } MotionDetector;
 

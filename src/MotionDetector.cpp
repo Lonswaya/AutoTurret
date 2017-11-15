@@ -26,7 +26,12 @@ int md_init(MotionDetector *md, MotionConfig *config) {
     md->frame_buffer.clear();
     md->rect_list.clear();
     
-    md->centers_of_motion.clear();
+    //md->centers_of_motion.clear();
+    //md->center_of_motion.x = config->max_x / 2;
+    //md->center_of_motion.y = config->max_y / 2;
+    md->total_center_x = 0;
+    md->total_center_y = 0;
+    md->center_count = 0;
 
     if(config->blur_size < 0) {
         config->blur_size = 0; //no blur
@@ -100,9 +105,28 @@ int md_detect(MotionDetector *md) {
         rectangle(out, md->rect_list[i], Scalar(255, 0, 0), 2, 8, 0 );    
     }
 
-    md->centers_of_motion.push_back( Point(x + dx / 2, y + dy / 2) );
-    circle(out, md->centers_of_motion.back(), 3, Scalar(0, 255, 0), 2, 8, 0);
-    circle(out, Point( (x + dx), (y + dy)), 3, Scalar(0, 255, 255), 2, 8, 0);
+    //using buffer can be expensive
+    //md->centers_of_motion.push_back( Point(x + dx / 2, y + dy / 2) );
+    //calculate average every frame instead
+    Point tmp_center(x + dx / 2, y + dy / 2);
+    md->total_center_x += tmp_center.x;
+    md->total_center_y += tmp_center.y;
+    md->center_count++;
+
+    //md->center_of_motion = Point(   (md->center_of_motion.x + tmp_center.x) / 2, 
+    //                                (md->center_of_motion.y + tmp_center.y) / 2);
+
+    //draw avg center
+    circle(out, Point(md->total_center_x / md->center_count, md->total_center_y / md->center_count), 3, Scalar(0, 255, 255), 2, 8, 0);
+
+    //centor of motion circle
+    //circle(out, md->centers_of_motion.back(), 3, Scalar(0, 255, 0), 2, 8, 0);
+    circle(out, tmp_center, 3, Scalar(0, 255, 0), 2, 8, 0);
+    
+    //forget about bottom right corner circle shit
+    //circle(out, Point( (x + dx), (y + dy)), 3, Scalar(0, 255, 255), 2, 8, 0);
+    
+    //top left red circle
     circle(out, Point(x, y), 3, Scalar(0, 0, 255), 2, 8, 0);
     
     
@@ -111,6 +135,7 @@ int md_detect(MotionDetector *md) {
     return 1;
 }
 
+/*
 int md_get_average_center(MotionDetector *md, int *x, int *y) {
     
     //some how we called this without any frames put in the list we just return center of camera
@@ -134,7 +159,7 @@ int md_get_average_center(MotionDetector *md, int *x, int *y) {
     md->centers_of_motion.clear();
 
     return 1;
-}
+}*/
 
 int md_find_motion(MotionDetector *md, Mat *diff_frame) {
     //turns out there is a countour function that will find all bounding rects commenting out these for now

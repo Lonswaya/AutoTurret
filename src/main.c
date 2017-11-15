@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 typedef enum mode {
     MANUAL,
@@ -89,8 +90,13 @@ int main(int argc, char **argv) {
     //packet buffer
     Packet packet;
     size_t size = 0;
+    
+    struct timeval time_struct;
+    gettimeofday(&time_struct, NULL);
+    long long last_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
 
     while(user_config.sys) {
+
 
         //attempt to decode a packet per iteration
         net_packetq_size(&connection, &size);
@@ -108,7 +114,7 @@ int main(int argc, char **argv) {
 
         if(user_config.mode == MANUAL) {
             printf("MANUAL\n");
-            printf("MOVE: (%hu, %hu)\n", user_config.move_x, user_config.move_y);
+            printf("MOVE: (%hd, %hd)\n", user_config.move_x, user_config.move_y);
             
             //turn off detection
             user_config.motion_config->detect_flag = 0; 
@@ -125,6 +131,34 @@ int main(int argc, char **argv) {
 
         if(user_config.mode == AUTO) {
             printf("AUTO\n");
+            printf("MOVE: (%hd, %hd)\n", user_config.move_x, user_config.move_y);
+
+            gettimeofday(&time_struct, NULL);
+            long long curr_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
+           
+            //if we seconds passed
+            if(curr_time - last_time >= 5000) {
+                user_config.move_x = (md.total_center_x / md.center_count) - (md.config->max_x / 2);
+                user_config.move_y = (md.total_center_y / md.center_count) - (md.config->max_y / 2);
+                                
+                
+                //turn off detection
+                user_config.motion_config->detect_flag = 0; 
+            
+                //TODO: 
+                //code to move servo according to move_x and move_y (relative value to center of screen)
+                //code to sleep appropreate amount of time until servo completed rotation
+
+                //turn on detection
+                user_config.motion_config->detect_flag = 1;
+
+                //should mutex lock happen here? do we care a few frames of inaccuracy?
+                md.total_center_x = 0;
+                md.total_center_y = 0;
+                md.center_count = 0;
+                last_time = curr_time;
+            }
+            
             continue;
         }
     }
