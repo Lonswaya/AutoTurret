@@ -5,15 +5,20 @@
 void turn_hard_loop();
 void turn_smooth_loop();
 
-int main(void) {
+int main(int argc, char ** argv) {
 	printf("Initiating auto tracker\n");
 	
 	// Initialization
 	initialize();
 	// Main loops
 	// turn_hard_loop()
-	//turn_smooth_loop();
-	human_input_loop();
+	if (argc > 1) {
+		if (argv[1][0] == 'h') {
+			human_input_loop();
+		} 
+	} else {
+		turn_smooth_loop();
+	}
 }
 void turn_hard_loop() {
 	while (1) {
@@ -31,7 +36,9 @@ void turn_hard_loop() {
 void turn_smooth_loop() {
 	go_to(90, 90);
 	while (1) {
-		go_to_smooth(90, 90, 180, 90, 3000); // Go to 180 degrees in 3000 ms (1 sec)
-		go_to_smooth(180, 90, 90, 90, 3000); // Go to 90 degrees in 3000 ms (1 sec)
+		go_to_smooth(90, 90, 135, 135, 3000); 
+		go_to_smooth(135, 135, 180, 90, 3000);
+		go_to_smooth(180, 90, 135, 135, 3000);
+		go_to_smooth(135, 135, 90, 90, 3000); 
 	}
 }
