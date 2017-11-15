@@ -172,6 +172,13 @@ int initialize() {
 	return wiringPiSetup();
 	pinMode(PIN_X, OUTPUT);
 	pinMode(PIN_Y, OUTPUT);
+	// Sometimes when first booting, pins can get stuck and not respond
+	digitalWrite(PIN_X, 0);
+	digitalWrite(PIN_Y, 0);
+	digitalWrite(PIN_X, 1);
+	digitalWrite(PIN_Y, 1);
+	digitalWrite(PIN_X, 0);
+	digitalWrite(PIN_Y, 0);
 }
 
 /*
