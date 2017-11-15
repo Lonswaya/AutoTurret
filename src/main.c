@@ -51,13 +51,14 @@ int main(int argc, char **argv) {
     while(user_config.sys) {
         net_packetq_size(&connection, &size);
         if(size > 0) {
+            printf("Taking a packet...\n");
             if(net_get_packet(&connection, &packet) < 0) {
                 printf("Err getting packet\n");
                 //TODO: how to handle these errors
                 continue;
             }           
-
-             
+            
+            printf("\tType: %d\n", packet.type);
         }
     }
 }
