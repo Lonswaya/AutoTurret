@@ -104,44 +104,10 @@ int md_detect(MotionDetector *md, int *x, int *y, int *dx, int *dy) {
     return 1;
 }
 
-/*
-int _md_search_full_motion(std::vector<cv::Rect> &list, Mat *frame, int x, int y) {
-    
-    int max_x = x;
-    int max_y = y; 
-    int min_x = max_x;
-    int min_y = min_y;
-
-    
-
-    
-
-
-    return 1;
-}
-
-*/
-
 int md_find_motion(MotionDetector *md, Mat *diff_frame) {
-    /*
-    int rows = diff_frame->rows;
-    int cols = diff_frame->cols;
-    
-    //loop over ethe entire image
-    for(int i = 0; i < rows; i++) {
-        for(int j = 0; j < cols; j++) {
-            
-            //if some pixel is not black AKA there are changes
-            if((int) diff_frame->at<uchar>(i, j) > 0) {
-                _md_search_full_motion(md->rect_list, diff_frame, i, j);   
-            }
-        }
-    }*/
-
     //turns out there is a countour function that will find all bounding rects commenting out these for now
 
-    //std::vector<cv::Rect> list = md->rect_list;
-    
+   
     md->rect_list.clear();    
     std::vector< std::vector<Point> > contours;
     std::vector<Vec4i> hierarchy;
@@ -154,7 +120,8 @@ int md_find_motion(MotionDetector *md, Mat *diff_frame) {
         md->rect_list.push_back(boundingRect(contours[i]));
     }
     
-    
+    //imshow("ss", *diff_frame);
+    //waitKey(1);
     return 1;
 }
 
@@ -193,12 +160,13 @@ int md_condense(MotionDetector *md, int *x, int *y, int *dx, int *dy) {
     return 1;
 }
 
+/*
 
 int main() {
     
     MotionConfig config;
-    config.blur_size = 0;
-    config.motion_thresh = 40;
+    config.blur_size = 5;
+    config.motion_thresh = 10;
 
     MotionDetector md;
     md_init(&md, &config);
@@ -210,3 +178,4 @@ int main() {
     }
 
 }
+*/

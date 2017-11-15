@@ -3,11 +3,9 @@ all: main
 MotionDetector.o: MotionDetector.cpp
 	g++ -c MotionDetector.cpp `pkg-config --cflags --libs opencv`
 
-main.o: main.c
-	g++ -c main.c
 
-main: MotionDetector.o main.o
-	g++ -o main main.o MotionDetector.o
+main: Networking.c main.c MotionDetector.o
+	g++ -o main main.c Networking.c MotionDetector.o -Wall -lpthread `pkg-config --cflags --libs opencv` -g
 
 clean:
-	rm main main.o MotionDetector.o
+	rm main MotionDetector.o

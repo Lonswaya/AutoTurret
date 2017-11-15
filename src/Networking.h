@@ -2,17 +2,28 @@
 #define NETWORKING_H_
 
 #include <pthread.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <stdint.h>
+
+//Packet type
+// 0 - mode control
+// 1 - manual direction data
+// 2 - system control
 
 typedef struct net_packet {
-    int type;       //see design doc on this
-    int data;
+    uint32_t type;       //see design doc on this
+    uint32_t data;
 
 } Packet;
 
-typedef struct net_packet_q_ent {
+typedef struct net_packet_q_ent PacketQEnt;
+
+struct net_packet_q_ent{
     Packet p;
     PacketQEnt *next;
-} PacketQEnt;
+};
 
 typedef struct net_packet_q {
     size_t size;    //good to have just in case we want to limit the queue
@@ -44,19 +55,26 @@ typedef struct net_conn {
  * initialize/allocate queue
  * init lock
  */
-int net_init(Connection *c, int port);
+int net_init(Connection *c);
 
 /*
  * Gets a packet from the queue
  * the packet will be filled into p
  * caller responsible allocating p
  */
-int get_packet(Connection *c, Packet *p);
+int net_get_packet(Connection *c, Packet *p);
+
+/*
+ * Checks the size of queue
+ * Needs to be a function because we want to mutex lock this 
+ * to prevent possible(?) race condition 
+ */
+int net_packetq_size(Connection *c, size_t *size);
 
 /*
  * Networking loop arg will be a Connection pointer
  */
-void net_loop(void arg);
+void *net_loop(void *arg);
 
 
 

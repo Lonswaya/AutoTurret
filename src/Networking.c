@@ -5,12 +5,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#define PORT 5000           //change this
+#define PORT 14000           //change this
 #define TIMEOUT 30          //seconds
 
-int net_init(Connection *c, int port) {
+int net_init(Connection *c) {
 
-    c->queue = malloc(sizeof(PacketQueue));
+    c->queue = (PacketQueue *) malloc(sizeof(PacketQueue));
     if(c->queue == NULL) {
         //couldn't allocate
         return -1;
@@ -53,28 +53,47 @@ int _net_init_socket(Connection *c) {
     }
 
     int yes = 1;
-    if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
+    if(setsockopt(c->server_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0) {
         //cant be reused??
         return -3;
     }
 
     struct sockaddr_in server_addr;
-    memset(&server_addr, 0, sizeof(struct spckaddr_in));
+    memset(&server_addr, 0, sizeof(struct sockaddr_in));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = htons(INADDR_ANY);
     server_addr.sin_port = htons(PORT);
 
-    if(bind(c->server_sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+    if(bind(c->server_socket, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
         //can't bind
         return -4;
     }
 
+    if(listen(c->server_socket, 10) < 0) {
+        //cant listen
+        return -5;
+    }
+
     c->state = INIT;
+    return 1;
+}
+
+int net_packetq_size(Connection *c, size_t *size) {
+
+    if(pthread_mutex_lock(&(c->queue->lock)) != 0) {
+        //can't lock ????
+        return -1;
+    }
+
+    *size = c->queue->size;
+
+    pthread_mutex_unlock(&(c->queue->lock));
+    return 1;
 }
 
 int net_get_packet(Connection *c, Packet *p) {
     
-    if(pthread_mutex_lock(&(c->queue->lock) != 0)) {
+    if(pthread_mutex_lock(&(c->queue->lock)) != 0) {
         //can't lock ????
         return -1;
     }
@@ -110,7 +129,7 @@ int net_get_packet(Connection *c, Packet *p) {
  * Private function used for the networking loop to recv packet
  * then put it in the queue
  */
-int _net_put_packet(Connection *c Packet *p) {
+int _net_put_packet(Connection *c, Packet *p) {
     
     //could have a max queue size check here
     
@@ -119,7 +138,7 @@ int _net_put_packet(Connection *c Packet *p) {
         return -1;
     }
 
-    PacketQEnt *new_p = malloc(sizeof(PacketQEnt));
+    PacketQEnt *new_p = (PacketQEnt *) malloc(sizeof(PacketQEnt));
     if(new_p == NULL) {
         //cant malloc
         return -2;
@@ -148,10 +167,11 @@ int _net_put_packet(Connection *c Packet *p) {
     return 1;
 }
 
-void network_loop(void *arg) {
+void *net_loop(void *arg) {
 
     Connection *c = (Connection *) arg;
     struct sockaddr client_addr;
+    socklen_t client_addr_len;
     
     while(c->state != STOP) { 
         
@@ -161,7 +181,8 @@ void network_loop(void *arg) {
                 continue;
             }
             
-            c->socket = accept(c->server_socket, &client_addr, sizeof(client_addr));
+            printf("Ready to accept\n");
+            c->socket = accept(c->server_socket, &client_addr, &client_addr_len);
 
             if(c->socket == -1) {
 
@@ -176,7 +197,7 @@ void network_loop(void *arg) {
             timeout.tv_sec = TIMEOUT;
             timeout.tv_usec = 0; 
             
-            if(setsockopt(c->socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout) < 0) {
+            if(setsockopt(c->socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout) < 0)) {
 
                 //recv timeout failed.. but we can still go
                 
@@ -204,7 +225,8 @@ void network_loop(void *arg) {
                 continue;
             }            
 
-            _net_put_packet(c, packet);
+            printf("\nRecv Packet with type: %d\n", packet.type);
+            _net_put_packet(c, &packet);
         }
     }
 }
