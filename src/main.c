@@ -59,6 +59,7 @@ int main(int argc, char **argv) {
             }           
             
             printf("\tType: %d\n", packet.type);
+            
         }
     }
 }

@@ -116,7 +116,7 @@ int net_get_packet(Connection *c, Packet *p) {
     }
 
     head->next = NULL;
-    free(c->queue->head); 
+    free(head); 
     c->queue->size--;
     
     //should check err on this too but waht do if erred?
