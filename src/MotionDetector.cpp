@@ -41,6 +41,12 @@ int md_init(MotionDetector *md, MotionConfig *config) {
         config->motion_thresh = 35; //some default value here
     }
 
+
+    if(pthread_mutex_init(&(md->lock), NULL) != 0) {
+        //couldn't init lock
+        return -1;
+    }
+
     return 1;
 }
 
@@ -60,11 +66,19 @@ int md_detect(MotionDetector *md) {
                 //camera disconnect or no more image???
                 return 0;
             }
+        
+            /*          
+            if(pthread_mutex_lock(&(md->lock)) != 0) {
+        //can't lock ????
+                return -1;
+            }*/
 
             if(md->config->blur_size > 0) {
                 GaussianBlur(curr_frame, curr_frame, Size(md->config->blur_size, md->config->blur_size), 0);  
             }
 
+            //pthread_mutex_unlock(&(md->lock));
+            
             cvtColor(curr_frame, curr_frame, CV_RGB2GRAY);
             md->frame_buffer.push_back(curr_frame);
         }
@@ -79,9 +93,19 @@ int md_detect(MotionDetector *md) {
 
 
     out = curr_frame;
+
+    /*
+    if(pthread_mutex_lock(&(md->lock)) != 0) {
+        //can't lock ????
+        return -1;
+    }*/
+
     if(md->config->blur_size > 0) {
         GaussianBlur(curr_frame, curr_frame, Size(md->config->blur_size, md->config->blur_size), 0);  
     }
+     
+    //pthread_mutex_unlock(&(md->lock));
+    
     cvtColor(curr_frame, curr_frame, CV_RGB2GRAY);
 
     md->frame_buffer.pop_front();
@@ -93,8 +117,17 @@ int md_detect(MotionDetector *md) {
     md->frame_buffer.push_back(curr_frame);
 
     bitwise_and(d1, d2, result); 
+
+    /*
+    if(pthread_mutex_lock(&(md->lock)) != 0) {
+        //can't lock ????
+        return -1;
+    }*/
+
     threshold(result, result, md->config->motion_thresh, 255, CV_THRESH_BINARY);    
 
+    //pthread_mutex_unlock(&(md->lock));
+    
     md_find_motion(md, &result);
 
     int x, y, dx, dy;
@@ -109,9 +142,18 @@ int md_detect(MotionDetector *md) {
     //md->centers_of_motion.push_back( Point(x + dx / 2, y + dy / 2) );
     //calculate average every frame instead
     Point tmp_center(x + dx / 2, y + dy / 2);
+    
+    /*
+    if(pthread_mutex_lock(&(md->lock)) != 0) {
+        //can't lock ????
+        return -1;
+    }*/
+    
     md->total_center_x += tmp_center.x;
     md->total_center_y += tmp_center.y;
     md->center_count++;
+
+    //pthread_mutex_unlock(&(md->lock));
 
     //md->center_of_motion = Point(   (md->center_of_motion.x + tmp_center.x) / 2, 
     //                                (md->center_of_motion.y + tmp_center.y) / 2);
@@ -215,36 +257,50 @@ int md_condense(MotionDetector *md, int *x, int *y, int *dx, int *dy) {
     return 1;
 }
 
+/*
+ * Why go through the trouble of making 3 functions ?
+ * IMO: It's clear to have 2 functions that is very jarring in the code
+ * so that when we maintain it it's very clear what's going on. since 
+ * restore needs to be called after disable everytime! Sort of like 
+ * disable and enable interrupt in OS
+ */
+int _md_tog_detect(MotionDetector *md, int flag) {
+
+    if(pthread_mutex_lock(&(md->lock)) != 0) {
+            //can't lock ????
+        return -1;
+    }
+    md->config->detect_flag = flag;
+    pthread_mutex_unlock(&(md->lock));
+    return 1;
+}
+int md_disable_detection(MotionDetector *md) {
+    return _md_tog_detect(md, 0);
+}
+int md_enable_detection(MotionDetector *md) {
+    return _md_tog_detect(md, 1);
+}
+
+
 void *detection_loop(void* arg) {
     MotionDetector *md = (MotionDetector *) arg;
 
+    //run flag doesnt need to lock since we can afford to
+    //have an extra frame run and wait until next frame
     while(md->run_flag) {
+        
+        //since most detection shit reads config we want to lock it here    
+        if(pthread_mutex_lock(&(md->lock)) != 0) {
+            //can't lock ???
+            continue;
+        }
+
         if(md->config->detect_flag) {
             md_detect(md);
         }
+    
+        pthread_mutex_unlock(&(md->lock));
+    
     }
     //thread ends clean up code    
 }
-
-
-
-
-/*
-
-int main() {
-    
-    MotionConfig config;
-    config.blur_size = 5;
-    config.motion_thresh = 10;
-
-    MotionDetector md;
-    md_init(&md, &config);
-
-    int x, y, dx, dy;
-
-    while(1) {
-        md_detect(&md, &x, &y, &dx, &dy);
-    }
-
-}
-*/

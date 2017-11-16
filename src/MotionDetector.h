@@ -8,27 +8,33 @@
 
 #include <vector>
 #include <list>
+#include <pthread.h>
 
 typedef struct motion_config {
-    int blur_size;      // how much to blue if applied
+    int blur_size;      // how much to blur if applied
     int motion_thresh;  // the threshold exceed in order to be considered motion
     int max_x;          // camera's width (will be set by init)
     int max_y;          // camera's height (will be set by init)
-    int detect_flag;
+    int detect_flag;    //will be used to halt detection ex. when camera moves
 } MotionConfig;
 
 typedef struct motion_detector {
-    cv::VideoCapture cam;
-    std::list<cv::Mat> frame_buffer;
-    std::vector<cv::Rect> rect_list;
-    MotionConfig *config;
-    //keeping a buffer and iteral all everyone could be expensive
+    cv::VideoCapture cam;                   //camera object for opencv
+    std::list<cv::Mat> frame_buffer;        //a buffer of 3 frames max for delta image
+    std::vector<cv::Rect> rect_list;        //a list that contains all motions found from a delta image
+    MotionConfig *config;                   //a struct of configurations md_detect needs
+    
+    //keeping a buffer and iterate all everytime could be expensive
     //std::vector<cv::Point> centers_of_motion;
-    int total_center_x;
-    int total_center_y;
-    int center_count;
+    
 
-    int run_flag;
+    unsigned int total_center_x;            //instead of a list we just keep a sum
+    unsigned int total_center_y;            //and divide by a total when we need to find average
+    unsigned int center_count;
+
+    int run_flag;                           //flag to stop network thread
+    pthread_mutex_t lock;                   //lock whenever something is changed on motion config
+
 } MotionDetector;
 
 /* 
@@ -60,9 +66,16 @@ extern "C" int md_find_motion(MotionDetector *md, cv::Mat *diff_frame);
 extern "C" int md_get_average_center(MotionDetector *md, int *x, int *y);
 
 /*
- * Helper function used to search all pixels belong to an area of motion given a top-left starting point
+ *  Disable motion detection from detection loop
  */
-int _md_search_full_motion(std::vector<cv::Rect> &list, cv::Mat *frame, int x, int y);
+extern "C" int md_disable_detection(MotionDetector *md);
+
+
+/*
+ * Restore motion detection from detection loop
+ * Meant to be called after md_disable_detection()
+ */
+extern "C" int md_enable_detection(MotionDetector *md);
 
 /*
  * Clean up i guess

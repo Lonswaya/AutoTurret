@@ -25,6 +25,10 @@ int decode_packet(Packet *p, UserConfig *config) {
             
             case 0: //switching mode
                 config->mode = (Mode) p->data;
+                config->move_x = 0;
+                config->move_y = 0;
+
+                //TODO:switching to auto mode should clock the time and clear motion detector's center_of_motion buffer
                 break;
             
             case 1: //manual control data: first 16 bits x, last 16 bits y
@@ -113,25 +117,27 @@ int main(int argc, char **argv) {
         }
 
         if(user_config.mode == MANUAL) {
-            printf("MANUAL\n");
-            printf("MOVE: (%hd, %hd)\n", user_config.move_x, user_config.move_y);
+
+            printf("MANUAL: (%hd, %hd)\n", user_config.move_x, user_config.move_y);
             
+            //TODO:these flags should seriously be locked
             //turn off detection
-            user_config.motion_config->detect_flag = 0; 
-            
+           
+            md_disable_detection(&md);
+
             //TODO: 
             //code to move servo according to move_x and move_y (relative value to center of screen)
             //code to sleep appropreate amount of time until servo completed rotation
 
             //turn on detection
-            user_config.motion_config->detect_flag = 1;
+            md_enable_detection(&md);
 
             continue;
         }
 
         if(user_config.mode == AUTO) {
-            printf("AUTO\n");
-            printf("MOVE: (%hd, %hd)\n", user_config.move_x, user_config.move_y);
+        
+            printf("AUTO: (%hd, %hd)\n", user_config.move_x, user_config.move_y);
 
             gettimeofday(&time_struct, NULL);
             long long curr_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
@@ -143,14 +149,14 @@ int main(int argc, char **argv) {
                                 
                 
                 //turn off detection
-                user_config.motion_config->detect_flag = 0; 
+                md_disable_detection(&md); 
             
                 //TODO: 
                 //code to move servo according to move_x and move_y (relative value to center of screen)
                 //code to sleep appropreate amount of time until servo completed rotation
 
                 //turn on detection
-                user_config.motion_config->detect_flag = 1;
+                md_enable_detection(&md);
 
                 //should mutex lock happen here? do we care a few frames of inaccuracy?
                 md.total_center_x = 0;
