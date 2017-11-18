@@ -155,18 +155,12 @@ int md_detect(MotionDetector *md) {
 
     //pthread_mutex_unlock(&(md->lock));
 
-    //md->center_of_motion = Point(   (md->center_of_motion.x + tmp_center.x) / 2, 
-    //                                (md->center_of_motion.y + tmp_center.y) / 2);
-
     //draw avg center
     circle(out, Point(md->total_center_x / md->center_count, md->total_center_y / md->center_count), 3, Scalar(0, 255, 255), 2, 8, 0);
 
     //centor of motion circle
     //circle(out, md->centers_of_motion.back(), 3, Scalar(0, 255, 0), 2, 8, 0);
     circle(out, tmp_center, 3, Scalar(0, 255, 0), 2, 8, 0);
-    
-    //forget about bottom right corner circle shit
-    //circle(out, Point( (x + dx), (y + dy)), 3, Scalar(0, 255, 255), 2, 8, 0);
     
     //top left red circle
     circle(out, Point(x, y), 3, Scalar(0, 0, 255), 2, 8, 0);
@@ -177,6 +171,7 @@ int md_detect(MotionDetector *md) {
     return 1;
 }
 
+//we will preserve this function just in case if we ever need a buffer again
 /*
 int md_get_average_center(MotionDetector *md, int *x, int *y) {
     
@@ -281,26 +276,47 @@ int md_enable_detection(MotionDetector *md) {
     return _md_tog_detect(md, 1);
 }
 
+int md_stop_thread(MotionDetector *md) {
+
+    if(pthread_mutex_lock(&(md->lock)) != 0) {
+            //can't lock ????
+        return -1;
+    }
+    md->run_flag = 0;
+    pthread_mutex_unlock(&(md->lock));
+    return 1;
+}
 
 void *detection_loop(void* arg) {
+    
     MotionDetector *md = (MotionDetector *) arg;
 
-    //run flag doesnt need to lock since we can afford to
-    //have an extra frame run and wait until next frame
-    while(md->run_flag) {
+    while(1) {
         
-        //since most detection shit reads config we want to lock it here    
         if(pthread_mutex_lock(&(md->lock)) != 0) {
-            //can't lock ???
-            continue;
+            //can't lock ????
+            return NULL;
+        }
+        int tmp_run_flag = md->run_flag;
+        pthread_mutex_unlock(&(md->lock));
+        
+        if(!tmp_run_flag) {
+            break;
         }
 
-        if(md->config->detect_flag) {
+        if(pthread_mutex_lock(&(md->lock)) != 0) {
+            //can't lock ????
+            return NULL;
+        }
+        
+        int tmp_detect_flag = md->config->detect_flag;
+
+        pthread_mutex_unlock(&(md->lock));
+        
+        if(tmp_detect_flag) {
             md_detect(md);
         }
-    
-        pthread_mutex_unlock(&(md->lock));
-    
     }
+
     //thread ends clean up code    
 }

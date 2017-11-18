@@ -78,6 +78,11 @@ extern "C" int md_disable_detection(MotionDetector *md);
 extern "C" int md_enable_detection(MotionDetector *md);
 
 /*
+ * Use this to stop thread
+ */
+extern "C" int md_stop_thread(MotionDetector *md);
+
+/*
  * Clean up i guess
  */
 extern "C" int md_clean_up(MotionDetector *md);

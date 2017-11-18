@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
     //system shutdown kill all other threads
 
     connection.state = STOP;
-    md.run_flag = 0;
+    md_stop_thread(&md);
     pthread_join(network_thread, NULL);  
     pthread_join(detection_thread, NULL);  
 }
