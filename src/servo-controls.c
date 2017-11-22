@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <math.h>
+#include <sys/time.h>
 #include "../include/servo-controls.h"
 
 // Compile with  gcc -Wall -o blink blink.c -lwiringPi
@@ -13,7 +14,7 @@
 
 #define PIN_X	7
 #define PIN_Y	0
-#define SIGNAL_PULSES	2
+#define SIGNAL_PULSES	4
 
 
 
@@ -55,12 +56,16 @@ void go_to(int x, int y) {
 	y_args.pin = PIN_Y;
 	x_args.deg = x;
 	y_args.deg = y; 
-	pthread_create( &s_x, &attr, (void *) &turn, (void *) &x_args);
-	pthread_create( &s_y, &attr, (void *) &turn, (void *) &y_args);
+	
+	turn(&x_args);
+	turn(&y_args);
+	
+	//pthread_create( &s_x, &attr, turn, &x_args);
+	//pthread_create( &s_y, &attr, turn, &y_args);
 
 	// Wait for both threads to finish
-	pthread_join(s_x, NULL);
-	pthread_join(s_y, NULL);
+	//pthread_join(s_x, NULL);
+	//pthread_join(s_y, NULL);
 	//printf("Traveled to (%d, %d)\n", x, y);
 }
 /**
@@ -103,22 +108,27 @@ void go_to_smooth(int startX, int startY, int endX, int endY, int timems) {
 	y_args.end = endY;
 	x_args.timems = timems;
 	y_args.timems = timems;
+
+
+	turn_smooth(&x_args);
+	turn_smooth(&y_args);
 	//printf("pin: %d, start: %d, end: %d, timems: %d\n",x_args.pin, x_args.start, x_args.end, x_args.timems);
 	//printf("pin: %d, start: %d, end: %d, timems: %d\n",y_args.pin, y_args.start, y_args.end, y_args.timems);
-	pthread_create( &s_x, /*&attr*/ NULL, (void *) &turn_smooth, (void *) &x_args);
-	pthread_create( &s_y, /*&attr*/ NULL, (void *) &turn_smooth, (void *) &y_args);
+//	pthread_create( &s_x, /*&attr*/ NULL, turn_smooth, &x_args);
+//	pthread_create( &s_y, /*&attr*/ NULL, turn_smooth, &y_args);
 
 	// Wait for both threads to finish
-	pthread_join(s_x, NULL);
-	pthread_join(s_y, NULL);
+//	pthread_join(s_x, NULL);
+//	pthread_join(s_y, NULL);
 	//printf("Turned smoothly to (%d, %d)\n", endX, endY);
 }
 
-void turn_smooth(struct turn_smooth_args * args/*int pin, int start, int end, int timems*/) {
+void *turn_smooth(void *arg)/*int pin, int start, int end, int timems*/ {
 	//printf("pin: %d, start: %d, end: %d, timems: %d\n",args->pin, args->start, args->end, args->timems);
+	struct turn_smooth_args *args = (struct turn_smooth_args *) arg;
 	if (args->timems == 0) {
 		printf("We're not that fast, sucker. Use turn(int pin, int deg) instead\n");
-		return;
+		return NULL;
 	}
 	struct turn_args args2;
 	args2.pin = args->pin;
@@ -126,7 +136,7 @@ void turn_smooth(struct turn_smooth_args * args/*int pin, int start, int end, in
 	turn(&args2);
 	int steps = args->timems/(SIGNAL_PULSES * 20); // The amount of steps that we need to take from here to there
 	float step_deg = ((float)(args->end-args->start))/(steps);
-	//printf("Taking %d steps, going %f each step to reach %d degrees\n", steps, step_deg, args->end);
+//printf("Taking %d steps, going %f each step to reach %d degrees\n", steps, step_deg, args->end);
 	int currentAngle = args->start;
 	//printf("abs: %d\n", abs(currentAngle - args->end));
 	while (abs(currentAngle - args->end) > abs(ceil(step_deg))) { 
@@ -144,28 +154,49 @@ void turn_smooth(struct turn_smooth_args * args/*int pin, int start, int end, in
 	turn(&args2);
 	
 }
-void turn(struct turn_args * args/*int pin, int deg*/) {
+void* turn(void* arg/*int pin, int deg*/) {
+	
+	struct turn_args *args = (struct turn_args *) arg;
 	if(args->deg < 30 || args->deg > 180) {
 		//printf("wrong angle, value is %d when we expect to be 30 < deg < 180\n", args->deg);
-		return;
+		return NULL;
 	}
 
 	// Magic bullshit to find our turn angle
-	float tmp = ( (float) 2 / 180) * args->deg;
+	printf("attemplting to go to %d\n", args->deg);
+	float tmp = ( (float) 1 / 180) * args->deg;
 	tmp *= 1000;
+	tmp += 1000;
 	int tmp2 = (int) tmp;
 
-	//printf("%d\n",tmp2);
+	printf("pulsing\n");
 	int i;
 	const unsigned int PULSE = SIGNAL_PULSES;
 	for(i = 0; i < PULSE; i++) {
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+		long long start = tv.tv_sec * 1000000 + tv.tv_usec;
+		printf("START PULSE PERIOD %ld.%06ld\n", tv.tv_sec, tv.tv_usec); 
 		digitalWrite(args->pin, 1);
 		//usleep(tmp2 * 1000);
-		delayMicroseconds(tmp2);
+		gettimeofday(&tv, NULL);
+		int tmp3 = 0;
+		long long current = tv.tv_sec * 1000000 + tv.tv_usec;
+		//printf("%llu %llu %d\n", current, start, tmp2);
+		if (current - start <= tmp2) {
+			tmp3 = (int)(tmp2 - (current - start));
+			delayMicroseconds(tmp3);
+		}
+		gettimeofday(&tv, NULL);
+	        printf("END SIGNAL %ld.%06ld\n",tv.tv_sec,  tv.tv_usec);	
 		digitalWrite(args->pin, 0);
 		//usleep((20000 - tmp2) * 1000);
-		delayMicroseconds(20000 - tmp2);
-	}		
+
+		delayMicroseconds(20000 - tmp3);
+
+		gettimeofday(&tv, NULL);
+	        printf("END PULSE PERIOD %ld.%06ld\n",tv.tv_sec, tv.tv_usec);
+	}
 }
 
 int initialize() {

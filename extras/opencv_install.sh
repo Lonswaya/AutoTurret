@@ -17,7 +17,7 @@
 sudo apt-get install -y build-essential cmake
 
 # GUI (if you want to use GTK instead of Qt, replace 'qt5-default' with 'libgtkglext1-dev' and remove '-DWITH_QT=ON' option in CMake):
-sudo apt-get install -y qt5-default libvtk6-dev
+sudo apt-get install -y libgtkglext1-dev libvtk6-dev
 
 # Media I/O:
 sudo apt-get install -y zlib1g-dev libjpeg-dev libwebp-dev libpng-dev libtiff5-dev libjasper-dev libopenexr-dev libgdal-dev
@@ -42,7 +42,7 @@ mv opencv-3.2.0 OpenCV
 cd OpenCV
 mkdir build
 cd build
-cmake -DWITH_QT=ON -DWITH_OPENGL=ON -DFORCE_VTK=ON -DWITH_TBB=ON -DWITH_GDAL=ON -DWITH_XINE=ON -DBUILD_EXAMPLES=ON -DENABLE_PRECOMPILED_HEADERS=OFF ..
+cmake -DWITH_OPENGL=ON -DFORCE_VTK=ON -DWITH_TBB=ON -DWITH_GDAL=ON -DWITH_XINE=ON -DBUILD_EXAMPLES=ON -DENABLE_PRECOMPILED_HEADERS=OFF ..
 make -j4
 sudo make install
 sudo ldconfig

@@ -20,7 +20,7 @@ tracker-loop: $(OBJS)
 
 tracker-loop.o : ./src/tracker-loop.c
 
-servo-control.o : ./src/servo-controls.c ./include/servo-controls.h
+servo-controls.o : ./src/servo-controls.c ./include/servo-controls.h
 
 servo-controller.o : ./src/servo-controller.c ./include/servo-controller.h
 

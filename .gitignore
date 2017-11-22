@@ -6,6 +6,10 @@ AUTORUN_LOG.txt
 
 # Main exec
 TrackerBot
+main
 
 # Vim turds
 *.swp 
+
+# OpenCV shit
+extras/OpenCV/

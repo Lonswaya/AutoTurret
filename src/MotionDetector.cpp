@@ -6,7 +6,7 @@ int md_init(MotionDetector *md, MotionConfig *config) {
         
     //cam.release() is called automatically upon subsequent open
     //no need to clean up before another open
-    md->cam.open(0 + CAP_ANY);
+    md->cam.open("/dev/video0");
     if(!md->cam.isOpened()) {
         //Failed to open camera
         return 0;
@@ -55,7 +55,7 @@ int md_detect(MotionDetector *md) {
     Mat curr_frame;
 
     Mat out; 
-
+    //printf("detecting");
     if(md->frame_buffer.size() == 0) {
         //motion detector first initialized
         //squeeze in 3 grabs, first grab is wasted from next pop
@@ -134,12 +134,13 @@ int md_detect(MotionDetector *md) {
 
     md_condense(md, &x, &y, &dx, &dy);
 
+    /*
     for(int i = 0; i < md->rect_list.size(); i++) {
         rectangle(out, md->rect_list[i], Scalar(255, 0, 0), 2, 8, 0 );    
-    }
+    }*/
 
     //using buffer can be expensive
-    //md->centers_of_motion.push_back( Point(x + dx / 2, y + dy / 2) );
+    //md->ngion.push_back( Point(x + dx / 2, y + dy / 2) );
     //calculate average every frame instead
     Point tmp_center(x + dx / 2, y + dy / 2);
     
@@ -156,17 +157,17 @@ int md_detect(MotionDetector *md) {
     //pthread_mutex_unlock(&(md->lock));
 
     //draw avg center
-    circle(out, Point(md->total_center_x / md->center_count, md->total_center_y / md->center_count), 3, Scalar(0, 255, 255), 2, 8, 0);
+    //circle(out, Point(md->total_center_x / md->center_count, md->total_center_y / md->center_count), 3, Scalar(0, 255, 255), 2, 8, 0);
 
     //centor of motion circle
     //circle(out, md->centers_of_motion.back(), 3, Scalar(0, 255, 0), 2, 8, 0);
-    circle(out, tmp_center, 3, Scalar(0, 255, 0), 2, 8, 0);
+    //circle(out, tmp_center, 3, Scalar(0, 255, 0), 2, 8, 0);
     
     //top left red circle
-    circle(out, Point(x, y), 3, Scalar(0, 0, 255), 2, 8, 0);
+    //circle(out, Point(x, y), 3, Scalar(0, 0, 255), 2, 8, 0);
     
     
-    imshow("ss", out);
+    //imshow("ss", out);
     waitKey(1);
     return 1;
 }
@@ -314,7 +315,8 @@ void *detection_loop(void* arg) {
         pthread_mutex_unlock(&(md->lock));
         
         if(tmp_detect_flag) {
-            md_detect(md);
+            int err = md_detect(md);
+	    //printf("detect() err = %d\n", err);
         }
     }
 

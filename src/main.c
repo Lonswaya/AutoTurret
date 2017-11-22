@@ -1,10 +1,12 @@
 #include "Networking.h"
 #include "MotionDetector.h"
+#include "../include/servo-controller.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <pigpio.h>
 
 typedef enum mode {
     MANUAL,
@@ -59,8 +61,9 @@ int main(int argc, char **argv) {
     motion_config.motion_thresh = 10;
 
     MotionDetector md;
-    md_init(&md, &motion_config);
-    
+    int err = md_init(&md, &motion_config);
+    //printf("init err = %d\n", err);
+
     pthread_t detection_thread;
 
     if(pthread_create(&detection_thread, NULL, detection_loop, &md)) {
@@ -86,11 +89,15 @@ int main(int argc, char **argv) {
 
     UserConfig user_config;
     user_config.motion_config = &motion_config;
-    user_config.mode = MANUAL;
+    user_config.mode = AUTO;
     user_config.sys = 1;
     user_config.move_x = 0;
     user_config.move_y = 0;
 
+    struct servo_controller sc;
+	printf("before\n");
+    servo_controller_init(&sc);
+    printf("after\n");
     //packet buffer
     Packet packet;
     size_t size = 0;
@@ -98,6 +105,8 @@ int main(int argc, char **argv) {
     struct timeval time_struct;
     gettimeofday(&time_struct, NULL);
     long long last_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
+    // Set timer for calling the servo update function every 100 ms
+    gpioSetTimerFuncEx(0, 100, update_servos, &sc);
 
     while(user_config.sys) {
 
@@ -118,7 +127,7 @@ int main(int argc, char **argv) {
 
         if(user_config.mode == MANUAL) {
 
-            printf("MANUAL: (%hd, %hd)\n", user_config.move_x, user_config.move_y);
+            //printf("MANUAL: (%hd, %hd)\n", user_config.move_x, user_config.move_y);
             
             //TODO:these flags should seriously be locked
             //turn off detection
@@ -128,16 +137,28 @@ int main(int argc, char **argv) {
             //TODO: 
             //code to move servo according to move_x and move_y (relative value to center of screen)
             //code to sleep appropreate amount of time until servo completed rotation
+	//float pX = user_config.move_x / user_config.motion_config.max_x;			
+	//int move = (int) (pX * ());
+		if(user_config.move_y == 2) {
+			servo_controller_turn(&sc, 5, 0);
+		}else if(user_config.move_y == 1) { 
+			
+			servo_controller_turn(&sc, -5, 0);
+		}
+		//turn on detection
+		
 
-            //turn on detection
             md_enable_detection(&md);
+
+		user_config.move_x = 0;
+		user_config.move_y = 0;
 
             continue;
         }
 
         if(user_config.mode == AUTO) {
         
-            printf("AUTO: (%hd, %hd)\n", user_config.move_x, user_config.move_y);
+            //printf("AUTO: (%hd, %hd)\n", user_config.move_x, user_config.move_y);
 
             gettimeofday(&time_struct, NULL);
             long long curr_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);

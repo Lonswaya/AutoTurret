@@ -18,6 +18,6 @@ typedef struct turn_smooth_args {
 
 void go_to(int x, int y);
 void go_to_smooth(int startX, int startY, int endX, int endY, int timems);
-void turn_smooth(struct turn_smooth_args * args/*int x, int y, int timems*/);
-void turn(struct turn_args * args/*int angle, int gpio*/);
+void *turn_smooth(void* arg/*int x, int y, int timems*/);
+void *turn(void* arg/*int angle, int gpio*/);
 int initialize();
