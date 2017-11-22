@@ -52,13 +52,31 @@ int decode_packet(Packet *p, UserConfig *config) {
     }
 }
 
+/**
+ * Moves the servos based off of the user config
+ */
+void MoveServos(UserConfig user_config, servo_controller sc, int sensitivity) {
+	int m_x, m_y;
+	if(user_config.move_y == 2) {
+		m_y = sensitivity;
+	}else if(user_config.move_y == 1) { 
+		m_y = -1 * sensitivity;
+	}
+	if (user_config.move_x == 2) {
+		m_x = sensitivity;
+	} else if (user_config.move_x == 1) {
+		m_x = -1 * sensitivity;
+	}
+	servo_controller_turn(&sc, m_x, m_y);
+}
+
 
 int main(int argc, char **argv) {
 
     //---------- Detection thread ----------
     MotionConfig motion_config;
     motion_config.blur_size = 5;
-    motion_config.motion_thresh = 10;
+    motion_config.motion_thresh = 100;
 
     MotionDetector md;
     int err = md_init(&md, &motion_config);
@@ -134,23 +152,12 @@ int main(int argc, char **argv) {
            
             md_disable_detection(&md);
 
-            //TODO: 
             //code to move servo according to move_x and move_y (relative value to center of screen)
             //code to sleep appropreate amount of time until servo completed rotation
 	//float pX = user_config.move_x / user_config.motion_config.max_x;			
 	//int move = (int) (pX * ());
 		int step_range = 30;
-		if(user_config.move_y == 2) {
-			servo_controller_turn(&sc, 0, step_range);
-		}else if(user_config.move_y == 1) { 
-			
-			servo_controller_turn(&sc, 0, -1 * step_range);
-		}
-		if (user_config.move_x == 2) {
-			servo_controller_turn(&sc, step_range, 0);
-		} else if (user_config.move_x == 1) {
-			servo_controller_turn(&sc, -1 * step_range, 0);
-		}
+		MoveServos(user_config, sc, step_range);	
 		//turn on detection
 		
 
@@ -170,7 +177,7 @@ int main(int argc, char **argv) {
             long long curr_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
            
             //if we seconds passed
-            if(curr_time - last_time >= 5000) {
+            if(curr_time - last_time >= 1000) {
                 user_config.move_x = (md.total_center_x / md.center_count) - (md.config->max_x / 2);
                 user_config.move_y = (md.total_center_y / md.center_count) - (md.config->max_y / 2);
                                 
@@ -180,9 +187,11 @@ int main(int argc, char **argv) {
             
                 //TODO: 
                 //code to move servo according to move_x and move_y (relative value to center of screen)
-                //code to sleep appropreate amount of time until servo completed rotation
-
-                //turn on detection
+		printf("Attempting to change position by (%d, %d)\n", user_config.move_x, user_config.move_y);
+		double tracking_speed_x = 0.8;
+		double tracking_speed_y = 1.2;
+		servo_controller_turn(&sc, -1 * (int)(user_config.move_x * tracking_speed_x),(int)( user_config.move_y * tracking_speed_y));
+		//turn on detection
                 md_enable_detection(&md);
 
                 //should mutex lock happen here? do we care a few frames of inaccuracy?

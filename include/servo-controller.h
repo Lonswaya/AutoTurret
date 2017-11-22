@@ -5,8 +5,8 @@
 #define	START_X	75
 #define	START_Y	-15
 
-#define	MIN_X	-60
-#define	MAX_X	270
+#define	MIN_X	-40
+#define	MAX_X	250
 
 #define	MIN_Y	-90
 #define	MAX_Y	180
