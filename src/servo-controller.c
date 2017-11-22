@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../include/servo-controller.h"
-#include "../include/servo-controls.h"
 #include <pigpio.h>
 
 /**
@@ -26,19 +25,32 @@ int atous(int angle) {
  */
 void update_servos(void * userdata) {
 	struct servo_controller * data  = (struct servo_controller *) userdata;
-	gpioServo(7, atous(data->xPos));
-	gpioServo(0, atous(data->yPos));
-	//go_to(sc->xPos, sc->yPos);
+	// These two gpio set modes are a workaround for updating position,
+	// Something about the default timing is messed up if you don't gpioSetMode
+	gpioSetMode(SERVO_X, PI_OUTPUT);
+	gpioSetMode(SERVO_Y, PI_OUTPUT);	
+	int result_x = gpioServo(SERVO_X, atous(data->xPos));
+	int result_y = gpioServo(SERVO_Y, atous(data->yPos));
+	if (result_x == PI_BAD_USER_GPIO) 
+		printf("Bad user gpio: x (%d)\n", SERVO_X);
+	if (result_y == PI_BAD_USER_GPIO) 
+		printf("Bad user gpio: y (%d)\n", SERVO_Y);
+	if (result_x == PI_BAD_PULSEWIDTH) 
+		printf("Bad pulse width: x (%d)\n", atous(data->xPos));
+	if (result_y == PI_BAD_PULSEWIDTH) 
+		printf("Bad pulse width: y (%d)\n", atous(data->yPos));
+	printf("telling servos: %d, %d\n", atous(data->xPos), atous(data->yPos));
 }
 
 void servo_controller_init(struct servo_controller * sc) {
-	//initialize();
-	sc->xPos = 90;
-	sc->yPos = 90;
-	gpioInitialise();
-	gpioSetMode(7, PI_OUTPUT);
-	gpioSetMode(0, PI_OUTPUT);
-	printf("servo controller set up\n");
+	sc->xPos = START_X;
+	sc->yPos = START_Y;
+	if (gpioInitialise() < 0) {
+		printf("GPIO setup failed\n");
+		exit(1);
+	}
+
+	update_servos(sc);
 }
 
 /**
@@ -46,7 +58,7 @@ void servo_controller_init(struct servo_controller * sc) {
  */
 void servo_controller_turn(struct servo_controller * sc, int diffX, int diffY) {
 	int xMaxHit, yMaxHit;
-
+	
 	if (sc->xPos + diffX >= MAX_X) {
 		sc->xPos = MAX_X;
 		xMaxHit = 1;
@@ -66,6 +78,6 @@ void servo_controller_turn(struct servo_controller * sc, int diffX, int diffY) {
 	} else {
 		sc->yPos += diffY;
 	}
-	if (xMaxHit && yMaxHit) return;
 	printf("controller update pos to %d, %d\n", sc->xPos, sc->yPos);
+	update_servos(sc);
 }

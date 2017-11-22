@@ -1,32 +1,15 @@
-NAME            = TrackerBot
+all: main
 
-CXX = g++ -g
-RM=rm -f
+src/MotionDetector.o: src/MotionDetector.cpp
+	g++ -c src/MotionDetector.cpp -lpthread `pkg-config --cflags --libs opencv`
+src/servo-controls.o: src/servo-controls.c
+	g++ -c src/servo-controls.c -Wall -pthread  -lwiringPi
 
-# All source files we want to compile
-SRCS=./src/tracker-loop.c ./src/servo-controls.c ./src/human-input.c ./src/servo-controller.c
+src/servo-controller.o: src/servo-controller.c
+	g++ -c src/servo-controller.c -Wall -pthread  -lwiringPi
 
-# The object files from sources
-OBJS=$(subst .c,.o,$(SRCS))
-
-LDFLAGS=-Wall -pthread
-
-LDLIBS= -lwiringPi -lncurses
-
-all: tracker-loop
-
-tracker-loop: $(OBJS)
-	$(CXX) $(LDFLAGS) -o $(NAME) $^ $(LDLIBS) 
-
-tracker-loop.o : ./src/tracker-loop.c
-
-servo-controls.o : ./src/servo-controls.c ./include/servo-controls.h
-
-servo-controller.o : ./src/servo-controller.c ./include/servo-controller.h
-
-human-input.o : ./src/human-input.c ./include/human-input.h
+main: src/Networking.c src/main.c src/MotionDetector.o src/servo-controller.o src/servo-controls.o
+	g++ -o main src/main.c src/Networking.c MotionDetector.o servo-controller.o servo-controls.o -lwiringPi -Wall -lpthread -lpigpio `pkg-config --cflags --libs opencv` -g
 
 clean:
-	$(RM) $(OBJS)
-distclean: clean
-	$(RM) $(NAME)
+	rm main servo-controls.o servo-controller.o MotionDetector.o

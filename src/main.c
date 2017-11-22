@@ -105,8 +105,8 @@ int main(int argc, char **argv) {
     struct timeval time_struct;
     gettimeofday(&time_struct, NULL);
     long long last_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
-    // Set timer for calling the servo update function every 100 ms
-    gpioSetTimerFuncEx(0, 100, update_servos, &sc);
+    // Set timer for calling the servo update function every 20 ms
+    //gpioSetTimerFuncEx(0, 20, update_servos, &sc);
 
     while(user_config.sys) {
 
@@ -139,11 +139,17 @@ int main(int argc, char **argv) {
             //code to sleep appropreate amount of time until servo completed rotation
 	//float pX = user_config.move_x / user_config.motion_config.max_x;			
 	//int move = (int) (pX * ());
+		int step_range = 30;
 		if(user_config.move_y == 2) {
-			servo_controller_turn(&sc, 5, 0);
+			servo_controller_turn(&sc, 0, step_range);
 		}else if(user_config.move_y == 1) { 
 			
-			servo_controller_turn(&sc, -5, 0);
+			servo_controller_turn(&sc, 0, -1 * step_range);
+		}
+		if (user_config.move_x == 2) {
+			servo_controller_turn(&sc, step_range, 0);
+		} else if (user_config.move_x == 1) {
+			servo_controller_turn(&sc, -1 * step_range, 0);
 		}
 		//turn on detection
 		
