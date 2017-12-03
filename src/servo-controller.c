@@ -39,7 +39,7 @@ void update_servos(void * userdata) {
 		printf("Bad pulse width: x (%d)\n", atous(data->xPos));
 	if (result_y == PI_BAD_PULSEWIDTH) 
 		printf("Bad pulse width: y (%d)\n", atous(data->yPos));
-	//printf("telling servos: %d, %d\n", atous(data->xPos), atous(data->yPos));
+	printf("telling servos: %d, %d\n", atous(data->xPos), atous(data->yPos));
 }
 
 void servo_controller_init(struct servo_controller * sc) {
@@ -78,6 +78,6 @@ void servo_controller_turn(struct servo_controller * sc, int diffX, int diffY) {
 	} else {
 		sc->yPos += diffY;
 	}
-	//printf("controller update pos to %d, %d\n", sc->xPos, sc->yPos);
+	printf("controller update pos to %d, %d\n", sc->xPos, sc->yPos);
 	update_servos(sc);
 }

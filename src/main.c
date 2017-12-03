@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <pigpio.h>
+#include <unistd.h>
+#include <math.h>
 
 typedef enum mode {
     MANUAL,
@@ -76,7 +78,7 @@ int main(int argc, char **argv) {
     //---------- Detection thread ----------
     MotionConfig motion_config;
     motion_config.blur_size = 5;
-    motion_config.motion_thresh = 100;
+    motion_config.motion_thresh = 50;
 
     MotionDetector md;
     int err = md_init(&md, &motion_config);
@@ -107,7 +109,7 @@ int main(int argc, char **argv) {
 
     UserConfig user_config;
     user_config.motion_config = &motion_config;
-    user_config.mode = AUTO;
+    user_config.mode = MANUAL;
     user_config.sys = 1;
     user_config.move_x = 0;
     user_config.move_y = 0;
@@ -156,8 +158,15 @@ int main(int argc, char **argv) {
             //code to sleep appropreate amount of time until servo completed rotation
 	//float pX = user_config.move_x / user_config.motion_config.max_x;			
 	//int move = (int) (pX * ());
-		int step_range = 30;
-		MoveServos(user_config, sc, step_range);	
+
+		
+	    	//if theres no movement skip
+		if(user_config.move_x == 0 && user_config.move_y == 0) {
+			continue;
+		}
+
+		servo_controller_turn(&sc, -1 * (int)(user_config.move_x ),(int)( user_config.move_y));
+		//MoveServos(user_config, sc, step_range);	
 		//turn on detection
 		
 
@@ -177,7 +186,7 @@ int main(int argc, char **argv) {
             long long curr_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
            
             //if we seconds passed
-            if(curr_time - last_time >= 1000) {
+            if(curr_time - last_time >= 1000 && md.center_count > 0) {
                 user_config.move_x = (md.total_center_x / md.center_count) - (md.config->max_x / 2);
                 user_config.move_y = (md.total_center_y / md.center_count) - (md.config->max_y / 2);
                                 
@@ -188,9 +197,23 @@ int main(int argc, char **argv) {
                 //TODO: 
                 //code to move servo according to move_x and move_y (relative value to center of screen)
 		printf("Attempting to change position by (%d, %d)\n", user_config.move_x, user_config.move_y);
-		double tracking_speed_x = 0.8;
-		double tracking_speed_y = 1.2;
-		servo_controller_turn(&sc, -1 * (int)(user_config.move_x * tracking_speed_x),(int)( user_config.move_y * tracking_speed_y));
+		double tracking_speed_x = 0.5;
+		double tracking_speed_y = 0.7;
+
+		double real_user_config_move_x = user_config.move_x * tracking_speed_x;
+		double real_user_config_move_y = user_config.move_y * tracking_speed_y;
+
+		double movement_threshold = 20; //Minimum movement needed to move servos
+		double magnitude = sqrt(pow(real_user_config_move_x, 2) + pow(real_user_config_move_y, 2));
+		if (magnitude > movement_threshold) {
+			servo_controller_turn(&sc, -1 * (int)real_user_config_move_x,(int)real_user_config_move_y);
+		} else {
+			printf("Below movement threshold: %f\n", magnitude);
+		}
+
+		//printf("starting delay \n");
+		usleep(500000);
+		//printf("ending delay \n");
 		//turn on detection
                 md_enable_detection(&md);
 
@@ -198,6 +221,9 @@ int main(int argc, char **argv) {
                 md.total_center_x = 0;
                 md.total_center_y = 0;
                 md.center_count = 0;
+
+		gettimeofday(&time_struct, NULL);
+		curr_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
                 last_time = curr_time;
             }
             

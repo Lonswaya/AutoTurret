@@ -8,7 +8,8 @@ int md_init(MotionDetector *md, MotionConfig *config) {
     //no need to clean up before another open
     md->cam.open("/dev/video0");
     if(!md->cam.isOpened()) {
-        //Failed to open camera
+        printf("cannot open camera\n");
+	//Failed to open camera
         return 0;
     }
 
@@ -20,6 +21,7 @@ int md_init(MotionDetector *md, MotionConfig *config) {
     if(md->config->max_x == 0 || md->config->max_y == 0) {
         //API can't decide the width and height of camera 
         //something went wrong
+	printf("missing camera specs\n");
         return 0;
     }
 
@@ -55,13 +57,13 @@ int md_detect(MotionDetector *md) {
     Mat curr_frame;
 
     Mat out; 
-    //printf("detecting");
     if(md->frame_buffer.size() == 0) {
         //motion detector first initialized
         //squeeze in 3 grabs, first grab is wasted from next pop
         for(int i = 0; i < 3; i++) {
 
             if(!md->cam.read(curr_frame)) {
+		printf("cannot read\n");
                 //could not read an image
                 //camera disconnect or no more image???
                 return 0;
@@ -83,14 +85,13 @@ int md_detect(MotionDetector *md) {
             md->frame_buffer.push_back(curr_frame);
         }
     }
-
     //grab the frame
     if(!md->cam.read(curr_frame)) {
         //could not read an image
         //camera disconnect or no more image???
-        return 0;
+        printf("i cannot read\n");
+	    return 0;
     }
-
 
     out = curr_frame;
 
@@ -100,75 +101,87 @@ int md_detect(MotionDetector *md) {
         return -1;
     }*/
 
-    if(md->config->blur_size > 0) {
-        GaussianBlur(curr_frame, curr_frame, Size(md->config->blur_size, md->config->blur_size), 0);  
+
+    if(pthread_mutex_lock(&(md->lock)) != 0) {
+            //can't lock ????
+    	return NULL;
     }
-     
-    //pthread_mutex_unlock(&(md->lock));
+    int tmp_detect_flag = md->config->detect_flag;
+
+    pthread_mutex_unlock(&(md->lock));
+    printf("detect flag: %d\n", tmp_detect_flag);
+
+    if(tmp_detect_flag) {
     
-    cvtColor(curr_frame, curr_frame, CV_RGB2GRAY);
+	    if(md->config->blur_size > 0) {
+		GaussianBlur(curr_frame, curr_frame, Size(md->config->blur_size, md->config->blur_size), 0);  
+	    }
+	     
+	    //pthread_mutex_unlock(&(md->lock));
+	    
+	    cvtColor(curr_frame, curr_frame, CV_RGB2GRAY);
 
-    md->frame_buffer.pop_front();
+	    md->frame_buffer.pop_front();
 
-    Mat d1, d2, result;
-    absdiff(md->frame_buffer.front(), md->frame_buffer.back(), d1);
+	    Mat d1, d2, result;
+	    absdiff(md->frame_buffer.front(), md->frame_buffer.back(), d1);
+	    
+	    absdiff(md->frame_buffer.back(), curr_frame, d2);
+	    md->frame_buffer.push_back(curr_frame);
+
+	    bitwise_and(d1, d2, result); 
+
+	    /*
+	    if(pthread_mutex_lock(&(md->lock)) != 0) {
+		//can't lock ????
+		return -1;
+	    }*/
+
+	    threshold(result, result, md->config->motion_thresh, 255, CV_THRESH_BINARY);    
+
+	    //pthread_mutex_unlock(&(md->lock));
+	    
+	    md_find_motion(md, &result);
+
+	    int x, y, dx, dy;
+
+	    md_condense(md, &x, &y, &dx, &dy);
+
+	    
+	    /*for(int i = 0; i < md->rect_list.size(); i++) {
+		rectangle(out, md->rect_list[i], Scalar(255, 0, 0), 2, 8, 0 );    
+	    }*/
+
+	    //using buffer can be expensive
+	    //md->ngion.push_back( Point(x + dx / 2, y + dy / 2) );
+	    //calculate average every frame instead
+	    Point tmp_center(x + dx / 2, y + dy / 2);
+	    
+	    /*
+	    if(pthread_mutex_lock(&(md->lock)) != 0) {
+		//can't lock ????
+		return -1;
+	    }*/
+	    
+	    md->total_center_x += tmp_center.x;
+	    md->total_center_y += tmp_center.y;
+	    md->center_count++;
+	    //pthread_mutex_unlock(&(md->lock));
+
+	    //draw avg center
+	    //circle(out, Point(md->total_center_x / md->center_count, md->total_center_y / md->center_count), 3, Scalar(0, 255, 255), 2, 8, 0);
+
+	    //centor of motion circle
+	    //circle(out, tmp_center, 3, Scalar(0, 255, 0), 2, 8, 0);
+	    
+	    //top left red circle
+	    //circle(out, Point(x, y), 3, Scalar(0, 0, 255), 2, 8, 0);
     
-    absdiff(md->frame_buffer.back(), curr_frame, d2);
-    md->frame_buffer.push_back(curr_frame);
+    }
 
-    bitwise_and(d1, d2, result); 
 
-    /*
-    if(pthread_mutex_lock(&(md->lock)) != 0) {
-        //can't lock ????
-        return -1;
-    }*/
-
-    threshold(result, result, md->config->motion_thresh, 255, CV_THRESH_BINARY);    
-
-    //pthread_mutex_unlock(&(md->lock));
-    
-    md_find_motion(md, &result);
-
-    int x, y, dx, dy;
-
-    md_condense(md, &x, &y, &dx, &dy);
-
-    /*
-    for(int i = 0; i < md->rect_list.size(); i++) {
-        rectangle(out, md->rect_list[i], Scalar(255, 0, 0), 2, 8, 0 );    
-    }*/
-
-    //using buffer can be expensive
-    //md->ngion.push_back( Point(x + dx / 2, y + dy / 2) );
-    //calculate average every frame instead
-    Point tmp_center(x + dx / 2, y + dy / 2);
-    
-    /*
-    if(pthread_mutex_lock(&(md->lock)) != 0) {
-        //can't lock ????
-        return -1;
-    }*/
-    
-    md->total_center_x += tmp_center.x;
-    md->total_center_y += tmp_center.y;
-    md->center_count++;
-
-    //pthread_mutex_unlock(&(md->lock));
-
-    //draw avg center
-    //circle(out, Point(md->total_center_x / md->center_count, md->total_center_y / md->center_count), 3, Scalar(0, 255, 255), 2, 8, 0);
-
-    //centor of motion circle
-    //circle(out, md->centers_of_motion.back(), 3, Scalar(0, 255, 0), 2, 8, 0);
-    //circle(out, tmp_center, 3, Scalar(0, 255, 0), 2, 8, 0);
-    
-    //top left red circle
-    //circle(out, Point(x, y), 3, Scalar(0, 0, 255), 2, 8, 0);
-    
-    
     //imshow("ss", out);
-    waitKey(1);
+    //waitKey(1);
     return 1;
 }
 
@@ -305,19 +318,11 @@ void *detection_loop(void* arg) {
             break;
         }
 
-        if(pthread_mutex_lock(&(md->lock)) != 0) {
-            //can't lock ????
-            return NULL;
-        }
         
-        int tmp_detect_flag = md->config->detect_flag;
-
-        pthread_mutex_unlock(&(md->lock));
-        
-        if(tmp_detect_flag) {
-            int err = md_detect(md);
+    
+        int err = md_detect(md);
 	    //printf("detect() err = %d\n", err);
-        }
+     
     }
 
     //thread ends clean up code    
