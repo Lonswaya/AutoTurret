@@ -31,6 +31,7 @@ typedef struct motion_detector {
     unsigned int total_center_x;            //instead of a list we just keep a sum
     unsigned int total_center_y;            //and divide by a total when we need to find average
     unsigned int center_count;
+    int	strength;		    // The max size of rectangles found, meant for fast-moving objects 
 
     int run_flag;                           //flag to stop network thread
     pthread_mutex_t lock;                   //lock whenever something is changed on motion config

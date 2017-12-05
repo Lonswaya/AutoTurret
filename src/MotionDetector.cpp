@@ -1,4 +1,5 @@
 #include "MotionDetector.h"
+#include <cmath>
 
 using namespace cv;
 
@@ -6,7 +7,7 @@ int md_init(MotionDetector *md, MotionConfig *config) {
         
     //cam.release() is called automatically upon subsequent open
     //no need to clean up before another open
-    md->cam.open("/dev/video0");
+    md->cam.open("http://localhost:8090/stream");
     if(!md->cam.isOpened()) {
         printf("cannot open camera\n");
 	//Failed to open camera
@@ -109,7 +110,7 @@ int md_detect(MotionDetector *md) {
     int tmp_detect_flag = md->config->detect_flag;
 
     pthread_mutex_unlock(&(md->lock));
-    printf("detect flag: %d\n", tmp_detect_flag);
+    //printf("detect flag: %d\n", tmp_detect_flag);
 
     if(tmp_detect_flag) {
     
@@ -147,11 +148,17 @@ int md_detect(MotionDetector *md) {
 
 	    md_condense(md, &x, &y, &dx, &dy);
 
-	    
-	    /*for(int i = 0; i < md->rect_list.size(); i++) {
-		rectangle(out, md->rect_list[i], Scalar(255, 0, 0), 2, 8, 0 );    
-	    }*/
-
+	    //int maxRectSize = 0;
+	    int combinedRectSize = 0;
+	    for(int i = 0; i < md->rect_list.size(); i++) {
+		Rect myRect = md->rect_list[i];
+		    int rectSize = abs(myRect.height * myRect.width);
+		    combinedRectSize += rectSize;
+		    //if (rectSize > maxRectSize) maxRectSize = rectSize;
+		    //rectangle(out, md->rect_list[i], Scalar(255, 0, 0), 2, 8, 0 );    
+	    }
+	    //md->strength = maxRectSize;
+	    md->strength = combinedRectSize;
 	    //using buffer can be expensive
 	    //md->ngion.push_back( Point(x + dx / 2, y + dy / 2) );
 	    //calculate average every frame instead
