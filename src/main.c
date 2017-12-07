@@ -1,6 +1,7 @@
 #include "Networking.h"
 #include "MotionDetector.h"
 #include "../include/servo-controller.h"
+#include "config.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -10,7 +11,7 @@
 #include <unistd.h>
 #include <math.h>
 
-
+/*
 int decode_packet(Packet *p, UserConfig *config) {
     switch(p->type) {
             
@@ -39,7 +40,7 @@ int decode_packet(Packet *p, UserConfig *config) {
             default:
                 return -1;                    
     }
-}
+}*/
 
 /**
  * Moves the servos based off of the user config
@@ -57,6 +58,71 @@ void MoveServos(UserConfig user_config, servo_controller sc, int sensitivity) {
 		m_x = -1 * sensitivity;
 	}
 	servo_controller_turn(&sc, m_x, m_y);
+}
+
+
+
+/* 
+ * Populate UserConfig from a file
+ */
+int load_config(UserConfig *c) {
+    FILE *file = fopen("config.cfg", "r");
+    if(file == NULL) {
+        return -1;
+    }
+    
+    char buf[64];
+
+    int ch;
+    int buf_idx = 0;
+    int g_idx = 0;
+
+    while((ch = fgetc(file)) != EOF) {
+        if(ch == '\n') {
+            buf[buf_idx] = '\0';
+            
+            if(g_idx == 0) {
+                c->mode = (Mode) strtol(buf);
+            } else if(g_idx == 1) {
+                c->move_x = (short) strtol(buf);
+            } else if(g_idx == 2) {
+                c->move_y = (short) strtol(buf);
+            } else if(g_idx == 3) {
+                c->port = strtoul(buf);
+            } else if(g_idx == 4) {
+                c->start_x = strtoul(buf);
+            } else if(g_idx == 5) {
+                c->start_y = strtoul(buf);
+            } else if(g_idx == 6) {
+                c->timeout = strtoul(buf);
+            } else if(g_idx == 7) {
+                c->auto_freq = strtoul(buf);
+            } else if(g_idx == 8) {
+                c->x_sens = strtoul(buf);
+            } else if(g_idx == 9) {
+                c->y_sens = strtoul(buf);
+            } else if(g_idx == 10) {
+                c->s_min_x = strtoul(buf);
+            } else if(g_idx == 11) {
+                c->s_min_y = strtoul(buf);
+            } else if(g_idx == 12) {
+                c->s_max_x = stroul(buf);
+            } else if(g_idx == 13) {
+                c->s_max_y = strtoul(buf);
+            } else {
+                strncpy(c->pass, buff, 16);
+            }
+
+            g_idx++;
+            buf_idx = 0;
+            continue;
+        }
+
+        buf[buf_idx] = ch;
+        buf_idx++;
+    }
+
+    return 1;
 }
 
 
@@ -96,15 +162,25 @@ int main(int argc, char **argv) {
 
     UserConfig user_config;
     user_config.motion_config = &motion_config;
+   
+
+    if(load_config(&user_config) < 0) {
+        perror("ERR: ");
+        exit(1);
+    }
+    /*
     user_config.mode = MANUAL;
     user_config.sys = 1;
     user_config.move_x = 0;
     user_config.move_y = 0;
+    */
 
+    //servo init
     struct servo_controller sc;
 	printf("before\n");
     servo_controller_init(&sc);
     printf("after\n");
+    
     //packet buffer
     Packet packet;
     size_t size = 0;
