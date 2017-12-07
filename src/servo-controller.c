@@ -40,7 +40,7 @@ void update_servos(void * userdata) {
 		printf("Bad pulse width: x (%d)\n", atous(data->xPos));
 	if (result_y == PI_BAD_PULSEWIDTH) 
 		printf("Bad pulse width: y (%d)\n", atous(data->yPos));
-	printf("telling servos: %d, %d\n", atous(data->xPos), atous(data->yPos));
+	//printf("telling servos: %d, %d\n", atous(data->xPos), atous(data->yPos));
 }
 
 void servo_controller_init(struct servo_controller * sc) {
@@ -79,7 +79,7 @@ void servo_controller_turn(struct servo_controller * sc, int diffX, int diffY) {
 	} else {
 		sc->yPos += diffY;
 	}
-	printf("controller update pos to %d, %d\n", sc->xPos, sc->yPos);
+	//printf("controller update pos to %d, %d\n", sc->xPos, sc->yPos);
 	update_servos(sc);
 }
 /**
@@ -87,19 +87,27 @@ void servo_controller_turn(struct servo_controller * sc, int diffX, int diffY) {
  *
  */
 void process_detected_input(struct servo_controller * sc, MotionDetector* md, UserConfig* user_config) {
-	// Constants TODO use config values
+	// Constants TODO use config values	
 	
-	double tracking_speed_x = -0.3;
+	double tracking_speed_x = -0.2;
 	double tracking_speed_y = 0.6;
 
-	double movement_threshold = 25; // How many degrees we can go before moving
+	double movement_threshold = 20; // How many degrees we can go before moving
 
 	double recording_threshold = 40; // A threshold for recording the last positions
 	
+	
+		
 	double move_x = user_config->move_x * tracking_speed_x;
 	double move_y = user_config->move_y * tracking_speed_y;
 	
 	double magnitude = sqrt(pow(move_x, 2) + pow(move_y, 2));
+	if (md->strength > 1000) {
+		printf("Strength: %d\n", md->strength);
+	} else if (md->strength > 5000) {
+		move_x *= log(md->strength) * 0.5;
+		move_y *= log(md->strength) * 0.5;
+	}
 	if (magnitude > recording_threshold) {
 		// ???
 	}

@@ -178,7 +178,9 @@ int main(int argc, char **argv) {
             long long curr_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
             //if we seconds passed
             if(curr_time - last_time >= 200 && md.center_count > 0) {
-		printf("(%d,%d)\n",user_config.move_x, user_config.move_y);
+		user_config.move_x = (md.total_center_x / md.center_count) - (md.config->max_x / 2);
+		user_config.move_y = (md.total_center_y / md.center_count) - (md.config->max_x / 2);
+		//printf("(%d,%d)\n",user_config.move_x, user_config.move_y);
                 md_disable_detection(&md); 
                 process_detected_input(&sc, &md, &user_config);
 		usleep(100 * 1000);
