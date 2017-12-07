@@ -1,4 +1,5 @@
 #include "Networking.h"
+#include "../include/UserConfig.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -8,7 +9,7 @@
 #define PORT 14000           //change this
 #define TIMEOUT 30          //seconds
 
-int net_init(Connection *c) {
+int net_init(Connection *c, UserConfig* config) {
 
     c->queue = (PacketQueue *) malloc(sizeof(PacketQueue));
     if(c->queue == NULL) {
@@ -23,7 +24,8 @@ int net_init(Connection *c) {
         //couldn't init lock
         return -2;
     }
-
+	
+    c->config = config;
     c->server_socket = 0;
     c->socket = 0;
     c->state = DED;
@@ -62,7 +64,7 @@ int _net_init_socket(Connection *c) {
     memset(&server_addr, 0, sizeof(struct sockaddr_in));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = htons(INADDR_ANY);
-    server_addr.sin_port = htons(PORT);
+    server_addr.sin_port = htons(c->config->port);
 
     if(bind(c->server_socket, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
         //can't bind
@@ -199,18 +201,19 @@ void *net_loop(void *arg) {
             
             if(setsockopt(c->socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout) < 0)) {
 
-                //recv timeout failed.. but we can still go
+                //setting timeout failed.. but we can still go
                 
             }
-
-            c->state = READY;
+		
+            //c->state = READY;
+	   c->state = AUTH;
         }
 
         if(c->state == BUZY) {
             continue;
         }
 
-        if(c->state == READY) {
+        if(c->state == READY || c->state == AUTH) {
                 
             Packet packet;
             size_t bytes;
@@ -225,8 +228,13 @@ void *net_loop(void *arg) {
                 continue;
             }            
 
+	    //only put packet into queue when we know this connection is authed
+	    if(c->state == READY) {
             //printf("\nRecv Packet with type: %d\n", packet.type);
-            _net_put_packet(c, &packet);
+            	_net_put_packet(c, &packet);
+	    }
+
+	    //if we are not authed yet the only packet we read is password
         }
     }
 

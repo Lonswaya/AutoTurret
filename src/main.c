@@ -10,13 +10,13 @@
 #include <pigpio.h>
 #include <unistd.h>
 #include <math.h>
+#include <netinet/in.h>
 
-/*
 int decode_packet(Packet *p, UserConfig *config) {
     switch(p->type) {
             
             case 0: //switching mode
-                config->mode = (Mode) p->data;
+                config->mode = (Mode) ntohl(p->data);
                 config->move_x = 0;
                 config->move_y = 0;
 
@@ -24,23 +24,59 @@ int decode_packet(Packet *p, UserConfig *config) {
                 break;
             
             case 1: //manual control data: first 16 bits x, last 16 bits y
-                config->move_y = (short) p->data;
-                config->move_x = (short) (p->data >> 16);
+		short tmp;
+		memcpy(&tmp, (char *) &(p->data), 2);
+		config->move_y = (short) ntohs(tmp);
+		
+		memcpy(&tmp, (char *) &(p->data) + 2, 2);
+		config->move_x = (short) ntohs(tmp);
+
+                //config->move_y = (short) p->data;
+                //config->move_x = (short) (p->data >> 16);
                 break;
             
             case 2: //control loop flag
-                config->sys = 0;
+                //config->sys = 0;
                 break;
             
-            case 3:
-                config->motion_config->motion_thresh = (short) p->data;
-                config->motion_config->blur_size = (short) (p->data >> 16);
+	case 3:
+                config->motion_config->blur_size = (int) ntohl(p->data);
                 break;
+	
+	case 4:
+		config->motion_config->motion_thresh = (int) ntohl(p->data);
+		break;
+	
+	case 5:
+		config->auto_freq = (unsigned int) ntohl(p->data);
+		break;
 
+	case 6:
+		config->x_sens = (float) ntohl(p->data);
+		break;
+	
+	case 7:
+		config->y_sens = (float) ntohl(p->data);
+		break;
+
+	case 8:
+		config->s_min_x = (int) ntohl(p->data);
+		break;
+	case 9:
+		config->s_min_y = (int) ntohl(p->data);
+		break;
+
+	case 10:
+		config->s_max_x = (int) ntohl(p->data);
+		break;
+
+	case 11:
+		config->s_max_y = (int) ntohl(p->data);
+		break;
             default:
                 return -1;                    
     }
-}*/
+}
 
 /**
  * Moves the servos based off of the user config
@@ -88,7 +124,7 @@ int load_config(UserConfig *c) {
             } else if(g_idx == 2) {
                 c->move_y = (short) strtol(buf, NULL, 10);
             } else if(g_idx == 3) {
-                c->port = strtoul(buf, NULL, 10);
+                c->port = (unsigned short) strtoul(buf, NULL, 10);
             } else if(g_idx == 4) {
                 c->start_x = strtol(buf, NULL, 10);
             } else if(g_idx == 5) {
@@ -144,11 +180,21 @@ int main(int argc, char **argv) {
         exit(1);
     }
     
+	
+    //set up config for network
+    UserConfig user_config;
+    user_config.motion_config = &motion_config;
+   
+
+    if(load_config(&user_config) < 0) {
+        perror("ERR: ");
+        exit(1);
+    }
 
     //---------- network thread ----------
     Connection connection;
     memset(&connection, 0, sizeof(connection));
-    net_init(&connection);
+    net_init(&connection, &user_config);
     pthread_t network_thread;
     
     if(pthread_create(&network_thread, NULL, net_loop, &connection)) {
@@ -160,21 +206,7 @@ int main(int argc, char **argv) {
     //---------- control thread ----------
     //main becomes control thread
 
-    UserConfig user_config;
-    user_config.motion_config = &motion_config;
    
-
-    if(load_config(&user_config) < 0) {
-        perror("ERR: ");
-        exit(1);
-    }
-    /*
-    user_config.mode = MANUAL;
-    user_config.sys = 1;
-    user_config.move_x = 0;
-    user_config.move_y = 0;
-    */
-
     //servo init
     struct servo_controller sc;
 	printf("before\n");

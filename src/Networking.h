@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "../include/UserConfig.h"
+
 //Packet type
 // 0 - mode control
 // 1 - manual direction data
@@ -39,7 +41,8 @@ typedef enum net_sock_state {
     ERR,    //any error happened, reset socket
     BUZY,   //socket is doing things cannot be used on other things
     DED,    //socket needs to be initialized
-    STOP    //flag to tell the networking thread to stop
+    STOP,   //flag to tell the networking thread to stop 
+    AUTH    //got a connection waiting to be authed
 } SOCK_STATE;
 
 //a connection struct used to abstract everything needed with networking
@@ -48,6 +51,7 @@ typedef struct net_conn {
     int socket;             //the socket that will be used to communicate with client   
     int server_socket;      //the socket used to bind then listen
     SOCK_STATE state;       //state the socket is in
+    UserConfig* config;
 } Connection;
 
 /* Initiliaze a connection
@@ -55,7 +59,7 @@ typedef struct net_conn {
  * initialize/allocate queue
  * init lock
  */
-int net_init(Connection *c);
+int net_init(Connection *c, UserConfig* config);
 
 /*
  * Gets a packet from the queue

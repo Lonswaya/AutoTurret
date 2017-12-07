@@ -13,7 +13,7 @@ typedef struct user_configs {
     Mode mode;
     short move_x;
     short move_y;
-    unsigned int port;
+    unsigned short port;
     int start_x;
     int start_y;
     unsigned int timeout;
