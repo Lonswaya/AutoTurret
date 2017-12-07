@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
             gettimeofday(&time_struct, NULL);
             long long curr_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
             //if we seconds passed
-            if(curr_time - last_time >= 600) {
+            if(curr_time - last_time >= 200) {
 		    double real_user_config_move_x, real_user_config_move_y;
 		    if (md.center_count > 0) {
 			    user_config.move_x = (md.total_center_x / md.center_count) - (md.config->max_x / 2);
@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
 		    }
 
 		    //printf("starting delay \n");
-		    usleep(50000);
+		    usleep(100000);
 		    //printf("ending delay \n");
 		    
             //turn on detection

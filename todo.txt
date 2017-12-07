@@ -1,0 +1,9 @@
+Server 
+________
+Adding password for authentication
+Checksum - ensure no connections lost
+Server reply - current mode, config
+
+Servos
+________
+Implement servo velocity, and drag
