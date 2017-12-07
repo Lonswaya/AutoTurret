@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "../include/servo-controller.h"
 #include <pigpio.h>
+#include <math.h>
 
 /**
  * This is our high-level servo abstraction
@@ -80,4 +81,29 @@ void servo_controller_turn(struct servo_controller * sc, int diffX, int diffY) {
 	}
 	printf("controller update pos to %d, %d\n", sc->xPos, sc->yPos);
 	update_servos(sc);
+}
+/**
+ * Take in the input from the motion detector, and process it
+ *
+ */
+void process_detected_input(struct servo_controller * sc, MotionDetector* md, UserConfig* user_config) {
+	// Constants TODO use config values
+	
+	double tracking_speed_x = -0.3;
+	double tracking_speed_y = 0.6;
+
+	double movement_threshold = 25; // How many degrees we can go before moving
+
+	double recording_threshold = 40; // A threshold for recording the last positions
+	
+	double move_x = user_config->move_x * tracking_speed_x;
+	double move_y = user_config->move_y * tracking_speed_y;
+	
+	double magnitude = sqrt(pow(move_x, 2) + pow(move_y, 2));
+	if (magnitude > recording_threshold) {
+		// ???
+	}
+	if (magnitude > movement_threshold) {
+		servo_controller_turn(sc, move_x, move_y); 
+	}
 }

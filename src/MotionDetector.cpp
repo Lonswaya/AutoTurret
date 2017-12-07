@@ -110,7 +110,7 @@ int md_detect(MotionDetector *md) {
     int tmp_detect_flag = md->config->detect_flag;
 
     pthread_mutex_unlock(&(md->lock));
-    //printf("detect flag: %d\n", tmp_detect_flag);
+    printf("detect flag: %d\n", tmp_detect_flag);
 
     if(tmp_detect_flag) {
     

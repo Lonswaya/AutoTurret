@@ -10,19 +10,6 @@
 #include <unistd.h>
 #include <math.h>
 
-typedef enum mode {
-    MANUAL,
-    AUTO
-} Mode;
-
-typedef struct user_configs {
-    MotionConfig *motion_config;
-    Mode mode;
-    int sys;
-    short move_x;
-    short move_y;
-} UserConfig;
-
 
 int decode_packet(Packet *p, UserConfig *config) {
     switch(p->type) {
@@ -190,64 +177,23 @@ int main(int argc, char **argv) {
             gettimeofday(&time_struct, NULL);
             long long curr_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
             //if we seconds passed
-            if(curr_time - last_time >= 200) {
-		    double real_user_config_move_x, real_user_config_move_y;
-		    if (md.center_count > 0) {
-			    user_config.move_x = (md.total_center_x / md.center_count) - (md.config->max_x / 2);
-                user_config.move_y = (md.total_center_y / md.center_count) - (md.config->max_y / 2);
-                                
-            	//printf("Center count: %d\n", md.center_count);
-                
-                //turn off detection
+            if(curr_time - last_time >= 200 && md.center_count > 0) {
+		printf("(%d,%d)\n",user_config.move_x, user_config.move_y);
                 md_disable_detection(&md); 
-            	
-                //code to move servo according to move_x and move_y (relative value to center of screen)
-			    //printf("Attempting to change position by (%d, %d)\n", user_config.move_x, user_config.move_y);
-			    double tracking_speed_x = 0.3;
-			    double tracking_speed_y = 0.6;
-
-			    //printf("Strength: %d\n", md.strength);
-		
-			    real_user_config_move_x = user_config.move_x * tracking_speed_x;
-			    real_user_config_move_y = user_config.move_y * tracking_speed_y;
-		    }
-
-		    double movement_threshold = 25; //Minimum movement needed to move servos
-		    double recording_threshold = 40; // A threshold for recording the last positions in last_x/y, to continue if target moves
-		    double magnitude = sqrt(pow(real_user_config_move_x, 2) + pow(real_user_config_move_y, 2));
-
-		    if (magnitude > recording_threshold) {
-			    // Only store if we hit the max, we don't want to continue in minor increments
-			    last_x = real_user_config_move_x;
-			    last_y = real_user_config_move_y;
-		    }
-		
-            if (magnitude > movement_threshold) {
-			//printf("Magnitude: %f\n", magnitude);
-			    servo_controller_turn(&sc, -1 * (int)real_user_config_move_x,(int)real_user_config_move_y);
-		
-            } else if (last_x != 0 || last_y != 0) {
-			//servo_controller_turn(&sc, -1 * last_x, last_y);
-			//last_x = last_y = 0;
-			//printf("Below movement threshold: %f/%f\n", magnitude, movement_threshold);
-		    } else {
-			//printf("Below movement threshold, no directions to continue\n");
-		    }
-
-		    //printf("starting delay \n");
-		    usleep(100000);
-		    //printf("ending delay \n");
+                process_detected_input(&sc, &md, &user_config);
+		usleep(100 * 1000);
+	        //printf("ending delay \n");
 		    
-            //turn on detection
-            md_enable_detection(&md);
+                //turn on detection
+                md_enable_detection(&md);
 
-            //should mutex lock happen here? do we care a few frames of inaccuracy?
-            md.total_center_x = 0;
-            md.total_center_y = 0;
-            md.center_count = 0;
-
-		    gettimeofday(&time_struct, NULL);
-		    curr_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
+                //should mutex lock happen here? do we care a few frames of inaccuracy?
+                md.total_center_x = 0;
+                md.total_center_y = 0;
+                md.center_count = 0;
+		
+		gettimeofday(&time_struct, NULL);
+                curr_time = (time_struct.tv_sec * 1e3 + time_struct.tv_usec / 1e3);
                 last_time = curr_time;
             } 
             

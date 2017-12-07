@@ -1,3 +1,4 @@
+#include "UserConfig.h"
 
 #define	SERVO_X	11
 #define	SERVO_Y	9
@@ -20,4 +21,4 @@ int atous(int angle);
 void update_servos(void * userdata);
 void servo_controller_init(struct servo_controller * sc);
 void servo_controller_turn(struct servo_controller * sc, int diffX, int diffY);
-
+void process_detected_input(struct servo_controller * sc, MotionDetector * md, UserConfig* user_config);
