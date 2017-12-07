@@ -1,3 +1,6 @@
+#ifndef CONFIG_H_
+#define CONFIG_H_
+
 #include "../src/MotionDetector.h"
 
 typedef enum mode {
@@ -6,9 +9,22 @@ typedef enum mode {
 } Mode;
 
 typedef struct user_configs {
-    MotionConfig * motion_config;
+    MotionConfig *motion_config;
     Mode mode;
-    int sys;
     short move_x;
     short move_y;
+    unsigned int port;
+    int start_x;
+    int start_y;
+    unsigned int timeout;
+    unsigned int auto_freq;
+    float x_sens;
+    float y_sens;
+    int s_min_x;
+    int s_min_y;
+    int s_max_x;
+    int s_max_y; 
+    char pass[16];
 } UserConfig;
+
+#endif

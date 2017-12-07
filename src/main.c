@@ -1,7 +1,7 @@
 #include "Networking.h"
 #include "MotionDetector.h"
 #include "../include/servo-controller.h"
-#include "config.h"
+#include "../include/UserConfig.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -82,35 +82,35 @@ int load_config(UserConfig *c) {
             buf[buf_idx] = '\0';
             
             if(g_idx == 0) {
-                c->mode = (Mode) strtol(buf);
+                c->mode = (Mode) strtol(buf, NULL, 10);
             } else if(g_idx == 1) {
-                c->move_x = (short) strtol(buf);
+                c->move_x = (short) strtol(buf, NULL, 10);
             } else if(g_idx == 2) {
-                c->move_y = (short) strtol(buf);
+                c->move_y = (short) strtol(buf, NULL, 10);
             } else if(g_idx == 3) {
-                c->port = strtoul(buf);
+                c->port = strtoul(buf, NULL, 10);
             } else if(g_idx == 4) {
-                c->start_x = strtoul(buf);
+                c->start_x = strtol(buf, NULL, 10);
             } else if(g_idx == 5) {
-                c->start_y = strtoul(buf);
+                c->start_y = strtol(buf, NULL, 10);
             } else if(g_idx == 6) {
-                c->timeout = strtoul(buf);
+                c->timeout = strtoul(buf, NULL, 10);
             } else if(g_idx == 7) {
-                c->auto_freq = strtoul(buf);
+                c->auto_freq = strtoul(buf, NULL, 10);
             } else if(g_idx == 8) {
-                c->x_sens = strtoul(buf);
+                c->x_sens = (float) atof(buf);
             } else if(g_idx == 9) {
-                c->y_sens = strtoul(buf);
+                c->y_sens = (float) atof(buf);
             } else if(g_idx == 10) {
-                c->s_min_x = strtoul(buf);
+                c->s_min_x = strtol(buf, NULL, 10);
             } else if(g_idx == 11) {
-                c->s_min_y = strtoul(buf);
+                c->s_min_y = strtol(buf, NULL, 10);
             } else if(g_idx == 12) {
-                c->s_max_x = stroul(buf);
+                c->s_max_x = strtol(buf, NULL, 10);
             } else if(g_idx == 13) {
-                c->s_max_y = strtoul(buf);
-            } else {
-                strncpy(c->pass, buff, 16);
+                c->s_max_y = strtol(buf, NULL, 10);
+            } else if(g_idx == 14) {
+                strncpy(c->pass, buf, 16);
             }
 
             g_idx++;
@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
     // Set timer for calling the servo update function every 20 ms
     //gpioSetTimerFuncEx(0, 20, update_servos, &sc);
 
-    while(user_config.sys) {
+    while(1) {
 
 
         //attempt to decode a packet per iteration
@@ -209,7 +209,7 @@ int main(int argc, char **argv) {
             }           
             
             //printf("\tType: %d\n", packet.type);
-            decode_packet(&packet, &user_config);
+            //decode_packet(&packet, &user_config);
         }
 
         if(user_config.mode == MANUAL) {
